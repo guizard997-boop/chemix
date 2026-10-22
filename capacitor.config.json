@@ -1,0 +1,11 @@
+{
+  "appId": "app.chemix.game",
+  "appName": "Chemix",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": false
+  }
+}

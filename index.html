@@ -1,0 +1,1886 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#0a0e17">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>Chemix — химический симулятор</title>
+  <link rel="manifest" href="manifest.webmanifest?v=3">
+  <link rel="icon" type="image/png" sizes="192x192" href="icon.png?v=3">
+  <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png?v=3">
+  <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png?v=3">
+  <link rel="apple-touch-icon" sizes="192x192" href="icon.png?v=3">
+  <meta name="apple-mobile-web-app-title" content="Chemix">
+  <meta name="application-name" content="Chemix">
+  <meta name="description" content="Подготовка к олимпиаде по химии: 118 элементов, сотни реакций, квиз, уроки. Устанавливается на Android как приложение.">
+
+  <style>
+    :root {
+      --bg: #05080f; --panel: #0c1220; --panel2: #111827;
+      --accent: #00f0ff; --accent2: #a855f7; --accent3: #22d3ee;
+      --success: #10b981; --danger: #f43f5e; --warn: #f59e0b;
+      --text: #e2e8f0; --muted: #64748b;
+      --glow: 0 0 20px rgba(0, 240, 255, 0.35);
+      --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; user-select: none; }
+    html, body { height: 100%; height: 100dvh; overflow: hidden; background: var(--bg); color: var(--text); font-family: var(--font); touch-action: manipulation; }
+    body {
+      display: flex; flex-direction: column;
+      background: radial-gradient(ellipse at 20% 0%, rgba(0,240,255,.08) 0%, transparent 50%),
+                  radial-gradient(ellipse at 80% 100%, rgba(168,85,247,.08) 0%, transparent 50%), var(--bg);
+    }
+    header {
+      flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 14px; background: linear-gradient(180deg, rgba(12,18,32,.95), transparent);
+      border-bottom: 1px solid rgba(0,240,255,.15); z-index: 10;
+    }
+    .logo { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 1.05rem; }
+    .logo-icon {
+      width: 28px; height: 28px; border-radius: 8px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      display: grid; place-items: center; font-size: 14px; box-shadow: var(--glow);
+    }
+    .progress-badge {
+      font-size: 0.7rem; background: rgba(0,240,255,.12); border: 1px solid rgba(0,240,255,.25);
+      padding: 4px 10px; border-radius: 20px; color: var(--accent);
+    }
+    .header-btns { display: flex; gap: 6px; }
+    .btn-icon {
+      width: 38px; height: 38px; border-radius: 11px; border: 1px solid rgba(0,240,255,.25);
+      background: rgba(0,240,255,.08); color: var(--accent); font-size: 16px;
+      display: grid; place-items: center; cursor: pointer; transition: all .2s;
+    }
+    .btn-icon:active { transform: scale(.92); background: rgba(0,240,255,.2); }
+    main { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; padding: 0 10px 4px; gap: 8px; }
+    .reactor-section {
+      flex-shrink: 0; background: var(--panel); border: 1px solid rgba(0,240,255,.2);
+      border-radius: 16px; padding: 10px 12px; box-shadow: inset 0 0 30px rgba(0,240,255,.05);
+    }
+    .reactor-title {
+      font-size: .65rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--accent);
+      margin-bottom: 6px; display: flex; align-items: center; gap: 6px;
+    }
+    .reactor-title::before {
+      content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--accent);
+      box-shadow: 0 0 8px var(--accent); animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+    .reactor-slots {
+      display: flex; gap: 6px; min-height: 64px; align-items: center; justify-content: center;
+      flex-wrap: wrap; margin-bottom: 8px;
+    }
+    .slot {
+      width: 52px; height: 52px; border-radius: 11px; border: 2px dashed rgba(0,240,255,.3);
+      background: rgba(0,0,0,.3); display: flex; flex-direction: column; align-items: center;
+      justify-content: center; position: relative; transition: all .2s;
+    }
+    .slot.filled { border-style: solid; border-color: var(--accent); background: rgba(0,240,255,.1); box-shadow: var(--glow); }
+    .slot .sym { font-weight: 700; font-size: 1rem; color: var(--accent); }
+    .slot .num { font-size: .5rem; color: var(--muted); }
+    .slot .remove {
+      position: absolute; top: -5px; right: -5px; width: 17px; height: 17px; border-radius: 50%;
+      background: var(--danger); color: #fff; font-size: 10px; display: grid; place-items: center; border: none; cursor: pointer;
+    }
+    .plus-sign { color: var(--muted); font-size: 1.1rem; }
+    .reactor-actions { display: flex; gap: 8px; }
+    .btn {
+      flex: 1; padding: 11px 14px; border-radius: 12px; border: none; font-weight: 600; font-size: .85rem;
+      cursor: pointer; transition: all .2s; display: flex; align-items: center; justify-content: center; gap: 5px;
+    }
+    .btn:active { transform: scale(.96); }
+    .btn-primary { background: linear-gradient(135deg, var(--accent), #0ea5e9); color: #0a0e17; box-shadow: 0 4px 18px rgba(0,240,255,.3); }
+    .btn-primary:disabled { opacity: .4; box-shadow: none; }
+    .btn-secondary { background: rgba(168,85,247,.15); color: var(--accent2); border: 1px solid rgba(168,85,247,.3); }
+    .result-panel {
+      flex-shrink: 0; background: var(--panel2); border-radius: 14px; padding: 11px 13px;
+      border: 1px solid rgba(16,185,129,.25); display: none; max-height: 160px; overflow-y: auto;
+    }
+    .result-panel.visible { display: block; animation: fadeIn .3s ease; }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
+    .result-formula { font-size: 1.35rem; font-weight: 700; color: var(--success); letter-spacing: 1px; }
+    .result-name { font-size: .85rem; margin-top: 2px; }
+    .result-meta { display: flex; flex-wrap: wrap; gap: 5px; margin: 6px 0 4px; }
+    .tag {
+      font-size: .65rem; padding: 2px 8px; border-radius: 6px; font-weight: 600;
+      background: rgba(0,240,255,.12); color: var(--accent);
+    }
+    .tag.bond { background: rgba(168,85,247,.15); color: var(--accent2); }
+    .tag.type { background: rgba(16,185,129,.15); color: var(--success); }
+    .result-desc { font-size: .72rem; color: var(--muted); line-height: 1.35; }
+    .result-edu { font-size: .72rem; color: var(--accent3); margin-top: 5px; line-height: 1.35; border-left: 2px solid var(--accent3); padding-left: 8px; }
+    .result-new {
+      display: inline-block; margin-top: 5px; padding: 2px 8px; border-radius: 6px;
+      background: rgba(16,185,129,.2); color: var(--success); font-size: .68rem; font-weight: 600;
+    }
+    .elements-section {
+      flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden;
+      background: var(--panel); border-radius: 16px; border: 1px solid rgba(0,240,255,.12);
+    }
+    .elements-header {
+      flex-shrink: 0; padding: 8px 12px 5px; display: flex; align-items: center; justify-content: space-between;
+    }
+    .elements-title { font-size: .65rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); }
+    .search-box {
+      display: flex; align-items: center; background: rgba(0,0,0,.3); border: 1px solid rgba(0,240,255,.15);
+      border-radius: 10px; padding: 5px 9px; gap: 5px; width: 130px;
+    }
+    .search-box input { background: transparent; border: none; outline: none; color: var(--text); font-size: .78rem; width: 100%; }
+    .search-box input::placeholder { color: var(--muted); }
+    .elements-grid {
+      flex: 1; min-height: 0; overflow-y: scroll; overflow-x: hidden; padding: 5px 10px 20px;
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(50px, 1fr)); gap: 5px;
+      -webkit-overflow-scrolling: touch; align-content: start;
+      overscroll-behavior: contain; touch-action: pan-y;
+    }
+    .el {
+      aspect-ratio: 1; border-radius: 9px; background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.06);
+      display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer;
+      transition: all .15s; position: relative; touch-action: manipulation;
+    }
+    .el:active { transform: scale(1.07); z-index: 50; box-shadow: 0 6px 20px rgba(0,0,0,.45); }
+    .el .num { position: absolute; top: 2px; left: 3px; font-size: .48rem; color: var(--muted); }
+    .el .sym { font-weight: 700; font-size: .9rem; line-height: 1; }
+    .el .name { font-size: .42rem; color: var(--muted); margin-top: 1px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 2px; }
+    .el.nonmetal { border-color: rgba(34,211,238,.4); color: #22d3ee; }
+    .el.noble-gas { border-color: rgba(167,139,250,.4); color: #a78bfa; }
+    .el.alkali { border-color: rgba(251,146,60,.4); color: #fb923c; }
+    .el.alkaline { border-color: rgba(250,204,21,.4); color: #facc15; }
+    .el.transition { border-color: rgba(96,165,250,.4); color: #60a5fa; }
+    .el.post-transition { border-color: rgba(52,211,153,.4); color: #34d399; }
+    .el.metalloid { border-color: rgba(244,114,182,.4); color: #f472b6; }
+    .el.halogen { border-color: rgba(248,113,113,.4); color: #f87171; }
+    .el.lanthanide { border-color: rgba(45,212,191,.4); color: #2dd4bf; }
+    .el.actinide { border-color: rgba(251,113,133,.4); color: #fb7185; }
+    .el.unknown { border-color: rgba(148,163,184,.3); color: #94a3b8; }
+    .modal {
+      position: fixed; inset: 0; background: rgba(5,8,15,.88); backdrop-filter: blur(8px);
+      z-index: 1000; display: none; align-items: flex-end; justify-content: center;
+    }
+    .modal.open { display: flex; }
+    .modal-content {
+      width: 100%; max-width: 480px; max-height: 88vh; background: var(--panel);
+      border-radius: 20px 20px 0 0; border: 1px solid rgba(0,240,255,.2); border-bottom: none;
+      padding: 18px 15px 28px; overflow-y: auto; animation: slideUp .3s ease;
+    }
+    @keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+    .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+    .modal-title { font-size: 1.05rem; font-weight: 700; color: var(--accent); }
+    .modal-close {
+      width: 34px; height: 34px; border-radius: 10px; border: 1px solid rgba(255,255,255,.1);
+      background: transparent; color: var(--muted); font-size: 16px; cursor: pointer;
+    }
+    .journal-list { display: flex; flex-direction: column; gap: 7px; }
+    .journal-item {
+      background: rgba(0,0,0,.25); border-radius: 11px; padding: 11px; border: 1px solid rgba(0,240,255,.1);
+    }
+    .journal-item .formula { font-weight: 700; color: var(--success); font-size: 1rem; }
+    .journal-item .name { font-size: .8rem; margin-top: 1px; }
+    .journal-item .meta { font-size: .68rem; color: var(--muted); margin-top: 3px; }
+    .empty-journal { text-align: center; color: var(--muted); padding: 36px 16px; font-size: .85rem; }
+    .toast {
+      position: fixed; top: 68px; left: 50%; transform: translateX(-50%) translateY(-16px);
+      background: var(--panel2); border: 1px solid var(--accent); color: var(--text);
+      padding: 9px 16px; border-radius: 11px; font-size: .8rem; z-index: 2000;
+      opacity: 0; pointer-events: none; transition: all .3s; box-shadow: var(--glow); max-width: 90%; text-align: center;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .el-detail { text-align: center; padding: 6px 0; }
+    .el-detail .big-sym { font-size: 2.8rem; font-weight: 800; line-height: 1; }
+    .el-detail .big-name { font-size: 1.15rem; margin: 5px 0; }
+    .el-detail .props { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: 14px; text-align: left; }
+    .el-detail .prop { background: rgba(0,0,0,.25); padding: 9px; border-radius: 9px; }
+    .el-detail .prop-label { font-size: .6rem; color: var(--muted); text-transform: uppercase; }
+    .el-detail .prop-value { font-size: .85rem; font-weight: 600; margin-top: 2px; }
+    .help-text { font-size: .78rem; color: var(--muted); line-height: 1.5; }
+    .help-text li { margin-bottom: 7px; margin-left: 14px; }
+    .help-text strong { color: var(--text); }
+    .lesson-card {
+      background: rgba(0,0,0,.25); border-radius: 12px; padding: 12px; margin-bottom: 10px;
+      border: 1px solid rgba(0,240,255,.1);
+    }
+    .lesson-card h3 { color: var(--accent); font-size: .9rem; margin-bottom: 6px; }
+    .lesson-card p { font-size: .75rem; color: var(--muted); line-height: 1.4; }
+    .stat-row { display: flex; gap: 8px; margin-bottom: 12px; }
+    .stat-box {
+      flex: 1; background: rgba(0,0,0,.3); border-radius: 10px; padding: 10px; text-align: center;
+      border: 1px solid rgba(0,240,255,.1);
+    }
+    .stat-box .num { font-size: 1.3rem; font-weight: 700; color: var(--accent); }
+    .stat-box .lbl { font-size: .6rem; color: var(--muted); text-transform: uppercase; margin-top: 2px; }
+    @supports (padding: max(0px)) {
+      header { padding-top: max(10px, env(safe-area-inset-top)); }
+      main { padding-bottom: max(10px, env(safe-area-inset-bottom)); }
+    }
+
+    /* Install banner */
+    .install-banner {
+      display: none; flex-shrink: 0; background: linear-gradient(90deg, rgba(0,240,255,.15), rgba(168,85,247,.15));
+      border: 1px solid rgba(0,240,255,.3); border-radius: 12px; padding: 10px 12px; margin: 0 10px 6px;
+      align-items: center; gap: 10px; font-size: .78rem;
+    }
+    .install-banner.show { display: flex; }
+    .install-banner .btn-install {
+      margin-left: auto; padding: 8px 14px; border-radius: 10px; border: none;
+      background: linear-gradient(135deg, var(--accent), #0ea5e9); color: #0a0e17;
+      font-weight: 700; font-size: .78rem; white-space: nowrap; cursor: pointer;
+    }
+    .quiz-q { font-size: .95rem; font-weight: 600; margin-bottom: 12px; line-height: 1.4; color: var(--text); }
+    .quiz-opt {
+      display: block; width: 100%; text-align: left; padding: 12px 14px; margin-bottom: 8px;
+      border-radius: 12px; border: 1px solid rgba(0,240,255,.2); background: rgba(0,0,0,.25);
+      color: var(--text); font-size: .85rem; cursor: pointer; transition: all .15s;
+    }
+    .quiz-opt:active { transform: scale(.98); }
+    .quiz-opt.correct { border-color: var(--success); background: rgba(16,185,129,.2); }
+    .quiz-opt.wrong { border-color: var(--danger); background: rgba(244,63,94,.15); }
+    .quiz-score { text-align: center; font-size: 1.1rem; margin: 12px 0; color: var(--accent); }
+    .ach-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+    .ach {
+      background: rgba(0,0,0,.25); border-radius: 10px; padding: 10px; border: 1px solid rgba(0,240,255,.12);
+      font-size: .72rem; text-align: center;
+    }
+    .ach.done { border-color: var(--success); color: var(--success); }
+    .ach .ico { font-size: 1.3rem; margin-bottom: 4px; }
+
+
+    /* Bottom nav */
+    .bottom-nav {
+      flex-shrink: 0; display: flex; background: var(--panel);
+      border-top: 1px solid rgba(0,240,255,.2); padding: 6px 4px max(6px, env(safe-area-inset-bottom));
+      z-index: 20;
+    }
+    .nav-btn {
+      flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px;
+      background: none; border: none; color: var(--muted); font-size: .65rem; padding: 6px 2px;
+      cursor: pointer; border-radius: 10px; transition: color .2s, background .2s;
+    }
+    .nav-btn .ico { font-size: 1.25rem; }
+    .nav-btn.active { color: var(--accent); background: rgba(0,240,255,.08); }
+
+    /* Views */
+    .view { display: none; flex: 1; flex-direction: column; overflow: hidden; }
+    .view.active { display: flex; }
+
+    /* Encyclopedia swipe */
+    .ency-wrap { flex: 1; display: flex; flex-direction: column; overflow: hidden; padding: 0 0 8px; }
+    .ency-card {
+      flex: 1; margin: 8px 12px; background: var(--panel); border-radius: 20px;
+      border: 1px solid rgba(0,240,255,.2); overflow: hidden; display: flex; flex-direction: column;
+      animation: cardIn .35s ease;
+    }
+    @keyframes cardIn { from { opacity: 0; transform: translateX(30px); } to { opacity: 1; transform: none; } }
+    .ency-visual {
+      height: 160px; position: relative; display: flex; align-items: center; justify-content: center;
+      background: radial-gradient(ellipse at center, rgba(0,240,255,.12), transparent 70%);
+      overflow: hidden;
+    }
+    .ency-visual.phase-gas .particles span {
+      position: absolute; border-radius: 50%; background: var(--el-color, #88f);
+      opacity: .5; animation: float 3s ease-in-out infinite;
+    }
+    @keyframes float {
+      0%,100% { transform: translate(0,0) scale(1); }
+      50% { transform: translate(10px,-15px) scale(1.1); }
+    }
+    .ency-visual.phase-liquid .liquid-surface {
+      position: absolute; bottom: 20%; left: 15%; right: 15%; height: 40%;
+      border-radius: 40% 40% 20% 20%; background: linear-gradient(180deg, rgba(255,255,255,.3), var(--el-color, #aaa));
+      opacity: .85; animation: wave 2s ease-in-out infinite;
+      box-shadow: 0 0 30px var(--el-color, #aaa);
+    }
+    @keyframes wave { 0%,100%{ transform: scaleX(1); } 50%{ transform: scaleX(1.05) translateY(-3px); } }
+    .ency-visual.phase-solid .metal-block {
+      width: 90px; height: 70px; border-radius: 12px;
+      background: linear-gradient(145deg, #fff8, var(--el-color, #888), #0006);
+      box-shadow: 0 8px 24px #0008, inset 0 1px 0 #fff4;
+      animation: shine 3s ease-in-out infinite;
+    }
+    @keyframes shine { 0%,100%{ filter: brightness(1); } 50%{ filter: brightness(1.15); } }
+    .ency-visual .big-sym-vis {
+      font-size: 3.5rem; font-weight: 800; color: var(--el-color, #0ff);
+      text-shadow: 0 0 30px var(--el-color, #0ff); z-index: 2; position: relative;
+    }
+    .ency-body { flex: 1; overflow-y: auto; padding: 14px 16px 20px; -webkit-overflow-scrolling: touch; }
+    .ency-name { font-size: 1.4rem; font-weight: 700; }
+    .ency-meta { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 12px; }
+    .ency-section { margin-bottom: 12px; }
+    .ency-section h4 {
+      font-size: .7rem; text-transform: uppercase; letter-spacing: 1px; color: var(--accent);
+      margin-bottom: 4px;
+    }
+    .ency-section p { font-size: .82rem; color: var(--text); line-height: 1.45; }
+    .ency-nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 16px; gap: 10px;
+    }
+    .ency-nav button {
+      width: 48px; height: 48px; border-radius: 14px; border: 1px solid rgba(0,240,255,.3);
+      background: rgba(0,240,255,.1); color: var(--accent); font-size: 1.4rem; cursor: pointer;
+    }
+    .ency-nav button:active { transform: scale(.92); }
+    .ency-pos { font-size: .8rem; color: var(--muted); }
+
+    /* Synth animation overlay */
+    .synth-fx {
+      pointer-events: none; position: fixed; inset: 0; z-index: 50; display: none;
+      align-items: center; justify-content: center;
+    }
+    .synth-fx.on { display: flex; }
+    .synth-fx .burst {
+      width: 120px; height: 120px; border-radius: 50%;
+      border: 3px solid var(--accent); animation: burst 0.7s ease-out forwards;
+      box-shadow: 0 0 40px var(--accent);
+    }
+    @keyframes burst {
+      0% { transform: scale(.2); opacity: 1; }
+      100% { transform: scale(2.5); opacity: 0; }
+    }
+
+    /* main without double flex issues when views */
+    main.has-views { padding-bottom: 0; }
+
+
+    .ency-photo {
+      width: 100%; height: 180px; object-fit: contain; background: #000;
+      display: block;
+    }
+    .ency-photo-wrap {
+      position: relative; background: #0a0a12; min-height: 160px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .ency-photo-credit {
+      position: absolute; bottom: 4px; right: 8px; font-size: .55rem;
+      color: rgba(255,255,255,.45);
+    }
+
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">
+      <img class="logo-icon" src="icon.png?v=3" alt="Chemix" width="28" height="28" style="border-radius:8px;object-fit:cover">
+      <span>Chemix</span>
+    </div>
+    <div class="progress-badge" id="progressBadge">0 / ?</div>
+    <div class="header-btns">
+      <button class="btn-icon" id="btnInstall" title="Установить" style="display:none">⬇️</button>
+      <button class="btn-icon" id="btnQuiz" title="Квиз олимпиады">🏆</button>
+      <button class="btn-icon" id="btnJournal" title="Журнал">📔</button>
+      <button class="btn-icon" id="btnLessons" title="Уроки">📚</button>
+      <button class="btn-icon" id="btnHelp" title="Справка">❓</button>
+    </div>
+  </header>
+
+  
+  <div class="install-banner" id="installBanner">
+    <span>📱 Установи на Android как приложение — работает офлайн</span>
+    <button class="btn-install" id="btnInstallBanner">Установить</button>
+  </div>
+
+  <main>
+    <section class="reactor-section">
+      <div class="reactor-title">Реактор синтеза</div>
+      <div class="reactor-slots" id="reactorSlots"></div>
+      <div class="reactor-actions">
+        <button class="btn btn-secondary" id="btnClear">Очистить</button>
+        <button class="btn btn-primary" id="btnSynthesize" disabled>⚡ Синтез</button>
+      </div>
+    </section>
+
+    <div class="result-panel" id="resultPanel">
+      <div class="result-formula" id="resultFormula"></div>
+      <div class="result-name" id="resultName"></div>
+      <div class="result-meta" id="resultMeta"></div>
+      <div class="result-desc" id="resultDesc"></div>
+      <div class="result-edu" id="resultEdu"></div>
+      <div class="result-new" id="resultNew" style="display:none">★ Новое открытие!</div>
+    </div>
+
+    <section class="elements-section">
+      <div class="elements-header">
+        <span class="elements-title">118 элементов</span>
+        <div class="search-box">
+          <span style="color:var(--muted);font-size:13px">🔍</span>
+          <input type="text" id="searchInput" placeholder="Поиск..." autocomplete="off">
+        </div>
+      </div>
+      <div class="elements-grid" id="elementsGrid"></div>
+    </section>
+  </main>
+
+  
+  <div class="view" id="viewEncy" style="display:none;position:fixed;top:56px;left:0;right:0;bottom:56px;flex-direction:column;background:var(--bg);z-index:5;">
+    <div class="ency-wrap">
+      <div class="ency-card" id="encyCard"></div>
+      <div class="ency-nav">
+        <button type="button" id="encyPrev">‹</button>
+        <span class="ency-pos" id="encyPos">1 / 118</span>
+        <button type="button" id="encyNext">›</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="synth-fx" id="synthFx"><div class="burst"></div></div>
+  <nav class="bottom-nav" id="bottomNav">
+    <button class="nav-btn active" data-view="reactor"><span class="ico">⚡</span>Реактор</button>
+    <button class="nav-btn" data-view="ency"><span class="ico">📖</span>Энциклопедия</button>
+    <button class="nav-btn" data-view="journal"><span class="ico">📔</span>Журнал</button>
+    <button class="nav-btn" data-view="quiz"><span class="ico">🏆</span>Квиз</button>
+  </nav>
+
+
+  <!-- Journal -->
+  <div class="modal" id="journalModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title">📔 Журнал открытий</div>
+        <button class="modal-close" id="closeJournal">✕</button>
+      </div>
+      <div class="stat-row" id="journalStats"></div>
+      <div class="journal-list" id="journalList"></div>
+    </div>
+  </div>
+
+  <!-- Lessons -->
+  <div class="modal" id="lessonsModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title">📚 Уроки химии</div>
+        <button class="modal-close" id="closeLessons">✕</button>
+      </div>
+      <div id="lessonsContent"></div>
+    </div>
+  </div>
+
+  <!-- Help -->
+  <div class="modal" id="helpModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title">❓ Как играть</div>
+        <button class="modal-close" id="closeHelp">✕</button>
+      </div>
+      <div class="help-text">
+        <p style="margin-bottom:10px"><strong>Chemix</strong> — подготовка к олимпиаде по химии: симулятор реакций, квиз и уроки.</p>
+        <ul>
+          <li>Нажми на 2–4 элемента (или открытие из журнала) → они попадут в реактор.</li>
+          <li>Нажми <strong>⚡ Синтез</strong> — реактор проверит реальную реакцию.</li>
+          <li>Успешные соединения сохраняются в <strong>журнале</strong>; их можно смешивать дальше.</li>
+          <li>Читай <strong>научное</strong> и <strong>обычное</strong> название, тип связи и заметку.</li>
+          <li>Долгое нажатие на элемент — подробная информация.</li>
+          <li><strong>📖 Энциклопедия</strong> — фото и описание внешнего вида элементов.</li>
+          <li>В разделе <strong>📚 Уроки</strong> — теория; в <strong>🏆 Квиз</strong> — проверка знаний.</li>
+        </ul>
+        <p style="margin-top:12px;color:var(--accent)">Сотни реакций · 118 элементов · Энциклопедия · Квиз · Уроки</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Element info -->
+  <div class="modal" id="infoModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title">Элемент</div>
+        <button class="modal-close" id="closeInfo">✕</button>
+      </div>
+      <div class="el-detail" id="elDetail"></div>
+    </div>
+  </div>
+
+  
+  <!-- Quiz Modal -->
+  <div class="modal" id="quizModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title">🏆 Квиз олимпиады</div>
+        <button class="modal-close" id="closeQuiz">✕</button>
+      </div>
+      <div id="quizBody"></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // ========== 118 ELEMENTS ==========
+    const ELEMENTS = [
+      {z:1,s:"H",n:"Водород",c:"nonmetal", val:1, edu:"Самый лёгкий элемент. Основа воды и органики."},
+      {z:2,s:"He",n:"Гелий",c:"noble-gas", val:0, edu:"Благородный газ. Не образует соединений при обычных условиях."},
+      {z:3,s:"Li",n:"Литий",c:"alkali", val:1, edu:"Самый лёгкий металл. Используется в батареях."},
+      {z:4,s:"Be",n:"Бериллий",c:"alkaline", val:2, edu:"Токсичен. Лёгкий и прочный — в авиации."},
+      {z:5,s:"B",n:"Бор",c:"metalloid", val:3, edu:"Металлоид. Важен для стекла и полупроводников."},
+      {z:6,s:"C",n:"Углерод",c:"nonmetal", val:4, edu:"Основа жизни. Алмаз, графит, графен, органика."},
+      {z:7,s:"N",n:"Азот",c:"nonmetal", val:3, edu:"78% воздуха. Аммиак, удобрения, белки."},
+      {z:8,s:"O",n:"Кислород",c:"nonmetal", val:2, edu:"Дыхание, горение, вода, оксиды."},
+      {z:9,s:"F",n:"Фтор",c:"halogen", val:1, edu:"Самый активный неметалл. Зубная паста, тефлон."},
+      {z:10,s:"Ne",n:"Неон",c:"noble-gas", val:0, edu:"Неоновые вывески. Полностью инертен."},
+      {z:11,s:"Na",n:"Натрий",c:"alkali", val:1, edu:"Поваренная соль NaCl. Мягкий металл."},
+      {z:12,s:"Mg",n:"Магний",c:"alkaline", val:2, edu:"Горит ярким белым пламенем. В хлорофилле."},
+      {z:13,s:"Al",n:"Алюминий",c:"post-transition", val:3, edu:"Лёгкий металл. Фольга, самолёты, банки."},
+      {z:14,s:"Si",n:"Кремний",c:"metalloid", val:4, edu:"Полупроводники, песок (SiO₂), стекло."},
+      {z:15,s:"P",n:"Фосфор",c:"nonmetal", val:3, edu:"Белый фосфор светится. Кости, ДНК, удобрения."},
+      {z:16,s:"S",n:"Сера",c:"nonmetal", val:2, edu:"Жёлтая. Серная кислота, вулканы, белки."},
+      {z:17,s:"Cl",n:"Хлор",c:"halogen", val:1, edu:"Газ-ядовитый. Дезинфекция воды, ПВХ."},
+      {z:18,s:"Ar",n:"Аргон",c:"noble-gas", val:0, edu:"1% воздуха. Инертная атмосфера в лампах."},
+      {z:19,s:"K",n:"Калий",c:"alkali", val:1, edu:"Необходим клеткам. Удобрения, бананы."},
+      {z:20,s:"Ca",n:"Кальций",c:"alkaline", val:2, edu:"Кости, зубы, мел, известняк (CaCO₃)."},
+      {z:21,s:"Sc",n:"Скандий",c:"transition", val:3, edu:"Редкий. В сплавах для авиации."},
+      {z:22,s:"Ti",n:"Титан",c:"transition", val:4, edu:"Прочный и лёгкий. Импланты, самолёты."},
+      {z:23,s:"V",n:"Ванадий",c:"transition", val:5, edu:"Упрочняет сталь. Катализатор H₂SO₄."},
+      {z:24,s:"Cr",n:"Хром",c:"transition", val:3, edu:"Хромирование, нержавейка."},
+      {z:25,s:"Mn",n:"Марганец",c:"transition", val:2, edu:"Сталеварение, батареи (MnO₂)."},
+      {z:26,s:"Fe",n:"Железо",c:"transition", val:2, edu:"Самый используемый металл. Гемоглобин, сталь."},
+      {z:27,s:"Co",n:"Кобальт",c:"transition", val:2, edu:"Синие пигменты, батареи, витамин B12."},
+      {z:28,s:"Ni",n:"Никель",c:"transition", val:2, edu:"Монеты, нержавейка, катализ."},
+      {z:29,s:"Cu",n:"Медь",c:"transition", val:2, edu:"Провода, бронза, латунь."},
+      {z:30,s:"Zn",n:"Цинк",c:"transition", val:2, edu:"Оцинковка, батареи, иммунитет."},
+      {z:31,s:"Ga",n:"Галлий",c:"post-transition", val:3, edu:"Плавится в руке. Полупроводники (GaAs)."},
+      {z:32,s:"Ge",n:"Германий",c:"metalloid", val:4, edu:"Первые транзисторы. Оптика."},
+      {z:33,s:"As",n:"Мышьяк",c:"metalloid", val:3, edu:"Яд. Полупроводники (GaAs)."},
+      {z:34,s:"Se",n:"Селен",c:"nonmetal", val:2, edu:"Фотоэлементы, антиоксидант."},
+      {z:35,s:"Br",n:"Бром",c:"halogen", val:1, edu:"Единственный жидкий неметалл. Фото, пламя."},
+      {z:36,s:"Kr",n:"Криптон",c:"noble-gas", val:0, edu:"Редкие соединения с фтором."},
+      {z:37,s:"Rb",n:"Рубидий",c:"alkali", val:1, edu:"Очень активный. Атомные часы."},
+      {z:38,s:"Sr",n:"Стронций",c:"alkaline", val:2, edu:"Красный фейерверк. Кости (Sr-90 опасен)."},
+      {z:39,s:"Y",n:"Иттрий",c:"transition", val:3, edu:"Светодиоды, сверхпроводники."},
+      {z:40,s:"Zr",n:"Цирконий",c:"transition", val:4, edu:"Ядерные реакторы (коррозиястойкий)."},
+      {z:41,s:"Nb",n:"Ниобий",c:"transition", val:5, edu:"Сверхпроводники, ювелирка."},
+      {z:42,s:"Mo",n:"Молибден",c:"transition", val:6, edu:"Высокотемпературная сталь."},
+      {z:43,s:"Tc",n:"Технеций",c:"transition", val:7, edu:"Первый искусственный элемент. Медицина."},
+      {z:44,s:"Ru",n:"Рутений",c:"transition", val:3, edu:"Катализ, электроника."},
+      {z:45,s:"Rh",n:"Родий",c:"transition", val:3, edu:"Самый дорогой. Катализаторы авто."},
+      {z:46,s:"Pd",n:"Палладий",c:"transition", val:2, edu:"Катализ, водородные мембраны."},
+      {z:47,s:"Ag",n:"Серебро",c:"transition", val:1, edu:"Лучшая электропроводность. Фото, ювелирка."},
+      {z:48,s:"Cd",n:"Кадмий",c:"transition", val:2, edu:"Токсичен. Батареи Ni-Cd (устарели)."},
+      {z:49,s:"In",n:"Индий",c:"post-transition", val:3, edu:"ITO — прозрачные электроды дисплеев."},
+      {z:50,s:"Sn",n:"Олово",c:"post-transition", val:4, edu:"Припой, бронза, консервные банки."},
+      {z:51,s:"Sb",n:"Сурьма",c:"metalloid", val:3, edu:"Антипирены, сплавы."},
+      {z:52,s:"Te",n:"Теллур",c:"metalloid", val:2, edu:"Солнечные батареи (CdTe)."},
+      {z:53,s:"I",n:"Иод",c:"halogen", val:1, edu:"Щитовидная железа. Антисептик."},
+      {z:54,s:"Xe",n:"Ксенон",c:"noble-gas", val:0, edu:"Образует XeF₂, XeO₃ — редкость для благородных."},
+      {z:55,s:"Cs",n:"Цезий",c:"alkali", val:1, edu:"Самый активный металл. Атомные часы."},
+      {z:56,s:"Ba",n:"Барий",c:"alkaline", val:2, edu:"Контраст в рентгене (BaSO₄). Зелёный фейерверк."},
+      {z:57,s:"La",n:"Лантан",c:"lanthanide", val:3, edu:"Начало лантаноидов. Оптика, батареи."},
+      {z:58,s:"Ce",n:"Церий",c:"lanthanide", val:4, edu:"Самый распространённый редкоземельный. Полировка."},
+      {z:59,s:"Pr",n:"Празеодим",c:"lanthanide", val:3, edu:"Магниты, стекло."},
+      {z:60,s:"Nd",n:"Неодим",c:"lanthanide", val:3, edu:"Сильнейшие постоянные магниты."},
+      {z:61,s:"Pm",n:"Прометий",c:"lanthanide", val:3, edu:"Радиоактивный. Нет стабильных изотопов."},
+      {z:62,s:"Sm",n:"Самарий",c:"lanthanide", val:3, edu:"Магниты SmCo, ядерная техника."},
+      {z:63,s:"Eu",n:"Европий",c:"lanthanide", val:3, edu:"Красный люминофор экранов."},
+      {z:64,s:"Gd",n:"Гадолиний",c:"lanthanide", val:3, edu:"МРТ-контраст, магниты."},
+      {z:65,s:"Tb",n:"Тербий",c:"lanthanide", val:3, edu:"Зелёный люминофор."},
+      {z:66,s:"Dy",n:"Диспрозий",c:"lanthanide", val:3, edu:"Магниты для электромобилей."},
+      {z:67,s:"Ho",n:"Гольмий",c:"lanthanide", val:3, edu:"Сильнейший магнитный момент."},
+      {z:68,s:"Er",n:"Эрбий",c:"lanthanide", val:3, edu:"Оптоволокно, лазеры."},
+      {z:69,s:"Tm",n:"Тулий",c:"lanthanide", val:3, edu:"Портативные рентген-аппараты."},
+      {z:70,s:"Yb",n:"Иттербий",c:"lanthanide", val:3, edu:"Атомные часы, лазеры."},
+      {z:71,s:"Lu",n:"Лютеций",c:"lanthanide", val:3, edu:"Самый тяжёлый лантаноид. ПЭТ-сканеры."},
+      {z:72,s:"Hf",n:"Гафний",c:"transition", val:4, edu:"Контрольные стержни реакторов."},
+      {z:73,s:"Ta",n:"Тантал",c:"transition", val:5, edu:"Конденсаторы, импланты (биосовместим)."},
+      {z:74,s:"W",n:"Вольфрам",c:"transition", val:6, edu:"Самая высокая T плавления. Нити ламп."},
+      {z:75,s:"Re",n:"Рений",c:"transition", val:7, edu:"Жаропрочные сплавы турбин."},
+      {z:76,s:"Os",n:"Осмий",c:"transition", val:4, edu:"Самый плотный элемент."},
+      {z:77,s:"Ir",n:"Иридий",c:"transition", val:3, edu:"Самый коррозионностойкий. Свечи зажигания."},
+      {z:78,s:"Pt",n:"Платина",c:"transition", val:2, edu:"Катализ, ювелирка, электроды."},
+      {z:79,s:"Au",n:"Золото",c:"transition", val:1, edu:"Благородный металл. Электроника, финансы."},
+      {z:80,s:"Hg",n:"Ртуть",c:"transition", val:2, edu:"Единственный жидкий металл. Токсична."},
+      {z:81,s:"Tl",n:"Таллий",c:"post-transition", val:1, edu:"Очень токсичен. Ранее в ядах."},
+      {z:82,s:"Pb",n:"Свинец",c:"post-transition", val:2, edu:"Аккумуляторы, защита от радиации. Токсичен."},
+      {z:83,s:"Bi",n:"Висмут",c:"post-transition", val:3, edu:"Низкая токсичность. Лекарства, сплавы."},
+      {z:84,s:"Po",n:"Полоний",c:"post-transition", val:2, edu:"Сильно радиоактивен. Открыт Кюри."},
+      {z:85,s:"At",n:"Астат",c:"halogen", val:1, edu:"Редчайший. Радиоактивный галоген."},
+      {z:86,s:"Rn",n:"Радон",c:"noble-gas", val:0, edu:"Радиоактивный газ. Риск рака лёгких."},
+      {z:87,s:"Fr",n:"Франций",c:"alkali", val:1, edu:"Самый редкий природный. Крайне радиоактивен."},
+      {z:88,s:"Ra",n:"Радий",c:"alkaline", val:2, edu:"Светится. Открыт Кюри. Радиоактивен."},
+      {z:89,s:"Ac",n:"Актиний",c:"actinide", val:3, edu:"Начало актиноидов. Радиоактивен."},
+      {z:90,s:"Th",n:"Торий",c:"actinide", val:4, edu:"Потенциальное ядерное топливо."},
+      {z:91,s:"Pa",n:"Протактиний",c:"actinide", val:5, edu:"Редкий актиноид."},
+      {z:92,s:"U",n:"Уран",c:"actinide", val:6, edu:"Ядерное топливо и оружие. U-235."},
+      {z:93,s:"Np",n:"Нептуний",c:"actinide", val:5, edu:"Первый трансурановый."},
+      {z:94,s:"Pu",n:"Плутоний",c:"actinide", val:4, edu:"Ядерное оружие и реакторы."},
+      {z:95,s:"Am",n:"Америций",c:"actinide", val:3, edu:"Датчики дыма."},
+      {z:96,s:"Cm",n:"Кюрий",c:"actinide", val:3, edu:"Назван в честь Кюри."},
+      {z:97,s:"Bk",n:"Берклий",c:"actinide", val:3, edu:"Синтезирован в Беркли."},
+      {z:98,s:"Cf",n:"Калифорний",c:"actinide", val:3, edu:"Источник нейтронов."},
+      {z:99,s:"Es",n:"Эйнштейний",c:"actinide", val:3, edu:"Назван в честь Эйнштейна."},
+      {z:100,s:"Fm",n:"Фермий",c:"actinide", val:3, edu:"Назван в честь Ферми."},
+      {z:101,s:"Md",n:"Менделевий",c:"actinide", val:3, edu:"В честь Менделеева."},
+      {z:102,s:"No",n:"Нобелий",c:"actinide", val:2, edu:"В честь Нобеля."},
+      {z:103,s:"Lr",n:"Лоуренсий",c:"actinide", val:3, edu:"В честь Лоуренса."},
+      {z:104,s:"Rf",n:"Резерфордий",c:"transition", val:4, edu:"Сверхтяжёлый. Короткоживущий."},
+      {z:105,s:"Db",n:"Дубний",c:"transition", val:5, edu:"Синтезирован в Дубне."},
+      {z:106,s:"Sg",n:"Сиборгий",c:"transition", val:6, edu:"В честь Сиборга."},
+      {z:107,s:"Bh",n:"Борий",c:"transition", val:7, edu:"В честь Бора."},
+      {z:108,s:"Hs",n:"Хассий",c:"transition", val:8, edu:"В честь земли Гессен."},
+      {z:109,s:"Mt",n:"Мейтнерий",c:"unknown", val:0, edu:"В честь Мейтнер. Свойства неизвестны."},
+      {z:110,s:"Ds",n:"Дармштадтий",c:"unknown", val:0, edu:"Синтезирован в Дармштадте."},
+      {z:111,s:"Rg",n:"Рентгений",c:"unknown", val:0, edu:"В честь Рентгена."},
+      {z:112,s:"Cn",n:"Коперниций",c:"transition", val:2, edu:"В честь Коперника. Летучий металл?"},
+      {z:113,s:"Nh",n:"Нихоний",c:"unknown", val:0, edu:"Первый элемент, открытый в Азии (Япония)."},
+      {z:114,s:"Fl",n:"Флеровий",c:"unknown", val:0, edu:"В честь Флёрова. Возможно, жидкий."},
+      {z:115,s:"Mc",n:"Московий",c:"unknown", val:0, edu:"В честь Московской области."},
+      {z:116,s:"Lv",n:"Ливерморий",c:"unknown", val:0, edu:"В честь Ливерморской лаборатории."},
+      {z:117,s:"Ts",n:"Теннессин",c:"unknown", val:0, edu:"В честь Теннесси. Галогеноподобный?"},
+      {z:118,s:"Og",n:"Оганесон",c:"noble-gas", val:0, edu:"Последний элемент. В честь Оганесяна. Возможно, не газ."}
+    ];
+
+    // ========== MASSIVE REACTION DATABASE ==========
+    // Key = sorted symbols joined by "+", value = {formula, name, type, bond, desc, edu}
+    const REACTIONS = {};
+
+    function add(key, formula, name, type, bond, desc, edu) {
+      REACTIONS[key] = { formula, name, type, bond, desc, edu };
+    }
+
+    // --- Water & simple hydrides / oxides ---
+    add("H+O", "H₂O", "Вода", "Синтез", "Ковалентная полярная", "Оксид водорода. Основа жизни.", "2H₂ + O₂ → 2H₂O. Экзотермическая реакция. Вода — универсальный растворитель.");
+    add("H+H+O", "H₂O", "Вода", "Синтез", "Ковалентная полярная", "Оксид водорода.", "Молекула H₂O имеет угол 104,5°. Водородные связи дают высокие T кипения.");
+    add("H+S", "H₂S", "Сероводород", "Синтез", "Ковалентная", "Газ с запахом тухлых яиц. Ядовит.", "Образуется при гниении белков. Слабая кислота.");
+    add("H+N", "NH₃", "Аммиак", "Синтез", "Ковалентная", "Газ с резким запахом. Основа удобрений.", "Процесс Габера-Боша: N₂ + 3H₂ → 2NH₃. Одно из важнейших промышленных соединений.");
+    add("H+H+N", "NH₃", "Аммиак", "Синтез", "Ковалентная", "Аммиак.", "Пирамидальная молекула. Хорошо растворяется в воде → NH₄OH.");
+    add("H+Cl", "HCl", "Хлороводород", "Синтез", "Ковалентная полярная", "Газ. В воде — соляная кислота.", "Сильная кислота. Желудочный сок содержит HCl.");
+    add("H+F", "HF", "Фтороводород", "Синтез", "Ковалентная", "Плавиковая кислота. Травит стекло.", "Самая слабая из галогеноводородных, но очень опасна (разрушает кости).");
+    add("H+Br", "HBr", "Бромоводород", "Синтез", "Ковалентная", "Сильная кислота.", "Используется в органическом синтезе.");
+    add("H+I", "HI", "Иодоводород", "Синтез", "Ковалентная", "Сильнейшая галогеноводородная кислота.", "Легко окисляется на воздухе.");
+    add("H+P", "PH₃", "Фосфин", "Синтез", "Ковалентная", "Ядовитый газ с запахом чеснока.", "Образуется при разложении фосфидов металлов водой.");
+    add("C+H", "CH₄", "Метан", "Синтез", "Ковалентная", "Простейший углеводород. Природный газ.", "Основной компонент природного газа. Парниковый газ.");
+    add("C+H+H", "CH₄", "Метан", "Синтез", "Ковалентная", "Метан.", "Тетраэдрическая молекула. Горит: CH₄ + 2O₂ → CO₂ + 2H₂O.");
+    add("Li+H", "LiH", "Гидрид лития", "Синтез", "Ионная", "Ионный гидрид. Восстановитель.", "Реагирует с водой: LiH + H₂O → LiOH + H₂.");
+    add("Na+H", "NaH", "Гидрид натрия", "Синтез", "Ионная", "Сильное основание / восстановитель.", "Используется в органической химии.");
+    add("Ca+H", "CaH₂", "Гидрид кальция", "Синтез", "Ионная", "Осушитель. Источник водорода.", "CaH₂ + 2H₂O → Ca(OH)₂ + 2H₂.");
+    add("Mg+H", "MgH₂", "Гидрид магния", "Синтез", "Ионная/ковалентная", "Перспективный материал для хранения H₂.", "Высокая ёмкость по водороду.");
+
+    // --- Carbon oxides ---
+    add("C+O", "CO₂", "Диоксид углерода", "Синтез / горение", "Ковалентная", "Углекислый газ. Продукт дыхания и горения.", "Парниковый газ. Сухой лёд — твёрдый CO₂. Растворяется → H₂CO₃.");
+    add("C+O+O", "CO₂", "Диоксид углерода", "Синтез", "Ковалентная", "CO₂.", "Линейная молекула O=C=O.");
+    add("C+C+O", "CO", "Монооксид углерода", "Синтез", "Ковалентная", "Угарный газ. Очень токсичен.", "Связывается с гемоглобином в 200 раз сильнее кислорода.");
+
+    // --- Nitrogen oxides ---
+    add("N+O", "NO", "Оксид азота(II)", "Синтез", "Ковалентная", "Бесцветный газ. Сигнальная молекула в организме.", "Образуется при молниях и в двигателях.");
+    add("N+O+O", "NO₂", "Диоксид азота", "Синтез", "Ковалентная", "Бурый ядовитый газ.", "Димеризуется в N₂O₄. Кислотный оксид → HNO₃.");
+    add("N+N+O", "N₂O", "Оксид азота(I)", "Синтез", "Ковалентная", "Веселящий газ. Анестетик.", "Используется в медицине и как пропеллент.");
+
+    // --- Sulfur oxides ---
+    add("S+O", "SO₂", "Диоксид серы", "Синтез / горение", "Ковалентная", "Сернистый газ. Острый запах.", "Кислотный оксид → H₂SO₃. Вызывает кислотные дожди.");
+    add("S+O+O", "SO₃", "Триоксид серы", "Синтез", "Ковалентная", "Ангидрид серной кислоты.", "SO₃ + H₂O → H₂SO₄. Ключевой этап производства H₂SO₄.");
+
+    // --- Phosphorus / boron / silicon oxides ---
+    add("P+O", "P₄O₁₀", "Оксид фосфора(V)", "Синтез", "Ковалентная", "Фосфорный ангидрид. Сильный осушитель.", "P₄O₁₀ + 6H₂O → 4H₃PO₄.");
+    add("B+O", "B₂O₃", "Оксид бора", "Синтез", "Ковалентная", "Стекло, флюс, бораты.", "Основной компонент боросиликатного стекла.");
+    add("Si+O", "SiO₂", "Диоксид кремния", "Синтез", "Ковалентная (сетевая)", "Кварц, песок, стекло.", "Одна из самых распространённых форм кремния на Земле.");
+    add("As+O", "As₂O₃", "Оксид мышьяка(III)", "Синтез", "Ковалентная", "Мышьяковистый ангидрид. Сильный яд.", "Исторически использовался как яд.");
+    add("Sb+O", "Sb₂O₃", "Оксид сурьмы(III)", "Синтез", "Ковалентная", "Пигмент, антипирен.", "Замедляет горение полимеров.");
+    add("Se+O", "SeO₂", "Диоксид селена", "Синтез", "Ковалентная", "Окислитель в органике.", "Белый твёрдый, сублимируется.");
+    add("Te+O", "TeO₂", "Диоксид теллура", "Синтез", "Ковалентная", "Оптическое стекло, акустооптика.", "Высокий показатель преломления.");
+
+    // --- Metal oxides (systematic) ---
+    const metalOxides = [
+      ["Li","Li₂O","Оксид лития","Основный оксид. Реагирует с водой → LiOH.","Li₂O + H₂O → 2LiOH."],
+      ["Na","Na₂O","Оксид натрия","Основный. Даёт щёлочь.","Na₂O + H₂O → 2NaOH."],
+      ["K","K₂O","Оксид калия","Основный оксид.","K₂O + H₂O → 2KOH."],
+      ["Rb","Rb₂O","Оксид рубидия","Сильно основный.","Очень гигроскопичен."],
+      ["Cs","Cs₂O","Оксид цезия","Сильно основный.","Один из самых основных оксидов."],
+      ["Be","BeO","Оксид бериллия","Амфотерный. Токсичен.","Высокая теплопроводность — в электронике."],
+      ["Mg","MgO","Оксид магния","Жжёная магнезия. Огнеупор.","MgO + H₂O → Mg(OH)₂ (медленно)."],
+      ["Ca","CaO","Оксид кальция","Негашёная известь.","CaO + H₂O → Ca(OH)₂ + тепло (гашение)."],
+      ["Sr","SrO","Оксид стронция","Основный.","Используется в ферритах и керамике."],
+      ["Ba","BaO","Оксид бария","Основный.","BaO + H₂O → Ba(OH)₂."],
+      ["Al","Al₂O₃","Оксид алюминия","Корунд. Амфотерный.","Основа керамики, сапфиров, наждака."],
+      ["Sc","Sc₂O₃","Оксид скандия","Слабо основный.","В высокопрочных сплавах."],
+      ["Ti","TiO₂","Диоксид титана","Белый пигмент (рутил).","Самый распространённый белый краситель."],
+      ["V","V₂O₅","Оксид ванадия(V)","Катализатор производства H₂SO₄.","Оранжево-жёлтый. Амфотерный."],
+      ["Cr","Cr₂O₃","Оксид хрома(III)","Зелёный пигмент.","«Хромовая зелень». Инертен."],
+      ["Mn","MnO₂","Диоксид марганца","Катализатор, катод батареек.","Разлагает H₂O₂: 2H₂O₂ → 2H₂O + O₂."],
+      ["Fe","Fe₂O₃","Оксид железа(III)","Ржавчина / гематит.","Основная железная руда."],
+      ["Fe+Fe","Fe₃O₄","Оксид железа(II,III)","Магнетит. Магнитный.","FeO·Fe₂O₃. Природный магнит."],
+      ["Co","CoO","Оксид кобальта(II)","Синий пигмент.","«Кобальтовое синее» в керамике."],
+      ["Ni","NiO","Оксид никеля","Зелёный/чёрный.","Керамика, аккумуляторы."],
+      ["Cu","CuO","Оксид меди(II)","Чёрный порошок.","Cu₂O — красный (оксид меди(I))."],
+      ["Cu+Cu","Cu₂O","Оксид меди(I)","Красный.","Образуется при ограниченном доступе O₂."],
+      ["Zn","ZnO","Оксид цинка","Белый. Цинковые белила.","В солнцезащитных кремах, резине."],
+      ["Ga","Ga₂O₃","Оксид галлия","Полупроводник с широкой запрещённой зоной.","Силовые электроприборы."],
+      ["Y","Y₂O₃","Оксид иттрия","Фосфоры, керамика.","Стабилизатор ZrO₂."],
+      ["Zr","ZrO₂","Оксид циркония","Циркониевая керамика.","Датчики кислорода, зубные протезы."],
+      ["Nb","Nb₂O₅","Оксид ниобия","Оптика, конденсаторы.","Высокий показатель преломления."],
+      ["Mo","MoO₃","Оксид молибдена","Катализатор.","Слоистая структура."],
+      ["Ag","Ag₂O","Оксид серебра","Коричнево-чёрный.","Разлагается при нагреве → Ag + O₂."],
+      ["Cd","CdO","Оксид кадмия","Коричневый. Токсичен.","Ранее в пигментах."],
+      ["In","In₂O₃","Оксид индия","Прозрачный проводник (ITO).","Экраны смартфонов и ТВ."],
+      ["Sn","SnO₂","Диоксид олова","Касситерит.","Газовые сенсоры, прозрачные электроды."],
+      ["Hf","HfO₂","Оксид гафния","High-k диэлектрик.","Заменил SiO₂ в транзисторах."],
+      ["Ta","Ta₂O₅","Оксид тантала","Конденсаторы.","Высокая диэлектрическая проницаемость."],
+      ["W","WO₃","Оксид вольфрама","Электрохромные стёкла.","Меняет цвет при напряжении."],
+      ["Hg","HgO","Оксид ртути","Красный/жёлтый.","Разлагается → Hg + O₂ (исторический опыт)."],
+      ["Pb","PbO","Оксид свинца(II)","Глёт.","В свинцовых стёклах и аккумуляторах."],
+      ["Bi","Bi₂O₃","Оксид висмута","Жёлтый.","Керамика, электроника, медицина."],
+      ["La","La₂O₃","Оксид лантана","Оптическое стекло.","Высокий показатель преломления."],
+      ["Ce","CeO₂","Диоксид церия","Каталитические нейтрализаторы.","Полировка стекла («крокус»)."],
+      ["Th","ThO₂","Диоксид тория","Огнеупор, ядерная керамика.","Очень высокая T плавления."],
+      ["U","UO₂","Диоксид урана","Ядерное топливо.","Таблетки в ТВЭЛах реакторов."],
+      ["Pu","PuO₂","Диоксид плутония","Ядерное топливо (МОХ).","Смешанное оксидное топливо."]
+    ];
+    metalOxides.forEach(([m, f, n, d, e]) => {
+      add(m + "+O", f, n, "Синтез / окисление", "Ионная / ионно-ковалентная", d, e);
+    });
+
+    // --- Halides (systematic for common metals) ---
+    const metals1 = ["Li","Na","K","Rb","Cs","Ag"]; // +1
+    const metals2 = ["Be","Mg","Ca","Sr","Ba","Zn","Cd","Hg","Pb","Sn","Fe","Co","Ni","Cu","Mn"];
+    const metals3 = ["Al","Sc","Y","La","Cr","Fe","Bi","In","Ga"];
+    const halogens = [
+      ["F","фторид","Fluoride"],
+      ["Cl","хлорид","Chloride"],
+      ["Br","бромид","Bromide"],
+      ["I","иодид","Iodide"]
+    ];
+
+    // +1 metals
+    metals1.forEach(m => {
+      halogens.forEach(([h, ru]) => {
+        const nameMap = {Li:"лития",Na:"натрия",K:"калия",Rb:"рубидия",Cs:"цезия",Ag:"серебра"};
+        add(m+"+"+h, m+h, ru.charAt(0).toUpperCase()+ru.slice(1)+" "+nameMap[m], "Синтез", "Ионная",
+          `Типичная ионная соль ${m}+ и ${h}−.`,
+          `Образуется при прямой реакции металла с галогеном. ${m === "Na" && h === "Cl" ? "Поваренная соль — самое известное соединение." : "Растворима в воде (кроме AgX)."}`);
+      });
+    });
+    // Special silver
+    add("Ag+Cl", "AgCl", "Хлорид серебра", "Синтез", "Ионная", "Белый осадок. Светочувствителен.", "Основа фотографии. Темнеет на свету → Ag + Cl₂.");
+    add("Ag+Br", "AgBr", "Бромид серебра", "Синтез", "Ионная", "Желтоватый. Фотоэмульсии.", "Самый важный для классической фотографии.");
+    add("Ag+I", "AgI", "Иодид серебра", "Синтез", "Ионная", "Жёлтый. Засев облаков.", "Используется для искусственного дождя.");
+
+    // +2 metals common
+    const m2names = {Be:"бериллия",Mg:"магния",Ca:"кальция",Sr:"стронция",Ba:"бария",Zn:"цинка",Cd:"кадмия",Hg:"ртути",Pb:"свинца",Sn:"олова",Fe:"железа(II)",Co:"кобальта(II)",Ni:"никеля",Cu:"меди(II)",Mn:"марганца(II)"};
+    metals2.forEach(m => {
+      if (!m2names[m]) return;
+      halogens.forEach(([h, ru]) => {
+        const form = m === "Hg" && h === "Cl" ? "HgCl₂" : (m + h + "₂");
+        add(m+"+"+h, form, ru.charAt(0).toUpperCase()+ru.slice(1)+" "+m2names[m], "Синтез", "Ионная",
+          `Бинарная соль ${m} и ${h}.`,
+          m === "Ca" && h === "Cl" ? "CaCl₂ — осушитель и антигололёдный реагент." :
+          m === "Mg" && h === "Cl" ? "Компонент морской соли и бишофита." :
+          m === "Ba" && h === "Cl" ? "Токсичен. Используется в аналитической химии." :
+          "Типичное ионное соединение. Многие гигроскопичны.");
+      });
+    });
+    add("Ca+F", "CaF₂", "Фторид кальция", "Синтез", "Ионная", "Плавиковый шпат. Источник фтора.", "Минерал флюорит. Прозрачен в УФ и ИК.");
+    add("Ba+S", "BaS", "Сульфид бария", "Синтез", "Ионная", "Фосфоресцирует.", "Исторически использовался в светящихся красках.");
+
+    // +3
+    const m3names = {Al:"алюминия",Sc:"скандия",Y:"иттрия",La:"лантана",Cr:"хрома(III)",Fe:"железа(III)",Bi:"висмута",In:"индия",Ga:"галлия"};
+    metals3.forEach(m => {
+      if (!m3names[m]) return;
+      halogens.forEach(([h, ru]) => {
+        add(m+"+"+h, m+h+"₃", ru.charAt(0).toUpperCase()+ru.slice(1)+" "+m3names[m], "Синтез", "Ионная / ковалентная",
+          `Тригалогенид ${m}.`,
+          m === "Al" && h === "Cl" ? "AlCl₃ — катализатор Фриделя-Крафтса. Дымит на воздухе." :
+          m === "Fe" && h === "Cl" ? "FeCl₃ — коагулянт, травление печатных плат." :
+          "Многие — кислоты Льюиса.");
+      });
+    });
+
+    // --- Sulfides ---
+    const sulfides = [
+      ["Na","Na₂S","Сульфид натрия","Кожевенная промышленность, красители."],
+      ["K","K₂S","Сульфид калия","Аналогичен Na₂S."],
+      ["Ca","CaS","Сульфид кальция","Фосфоресценция, люминофоры."],
+      ["Fe","FeS","Сульфид железа(II)","Пирротин. Образуется при коррозии."],
+      ["Fe+Fe","FeS₂","Дисульфид железа","Пирит («золото дураков»)."],
+      ["Zn","ZnS","Сульфид цинка","Фосфор, пигмент, сцинтилляторы."],
+      ["Cu","CuS","Сульфид меди(II)","Ковеллин. Минерал."],
+      ["Cu+Cu","Cu₂S","Сульфид меди(I)","Халькозин. Важная медная руда."],
+      ["Pb","PbS","Сульфид свинца","Галенит. Главная свинцовая руда."],
+      ["Hg","HgS","Сульфид ртути","Киноварь. Красный пигмент (вермильон)."],
+      ["Ag","Ag₂S","Сульфид серебра","Чернь на серебре. Аргентит."],
+      ["Cd","CdS","Сульфид кадмия","Жёлтый пигмент (кадмиевый жёлтый)."],
+      ["Mo","MoS₂","Дисульфид молибдена","Сухая смазка. Антифрикционный."],
+      ["As","As₂S₃","Сульфид мышьяка","Аурипигмент. Жёлтый минерал."],
+      ["Sb","Sb₂S₃","Сульфид сурьмы","Стибнит. Главная руда сурьмы."]
+    ];
+    sulfides.forEach(([m, f, n, e]) => {
+      add(m+"+S", f, n, "Синтез", "Ионная / ковалентная", "Сульфид.", e);
+    });
+
+    // --- Nitrides ---
+    const nitrides = [
+      ["Li","Li₃N","Нитрид лития","Один из немногих ионных нитридов. Реагирует с водой."],
+      ["Mg","Mg₃N₂","Нитрид магния","Образуется при горении Mg на воздухе."],
+      ["Al","AlN","Нитрид алюминия","Высокая теплопроводность. Подложки электроники."],
+      ["B","BN","Нитрид бора","«Белый графит» или кубический (как алмаз). Смазка / абразив."],
+      ["Si","Si₃N₄","Нитрид кремния","Высокотемпературная керамика. Подшипники, турбины."],
+      ["Ti","TiN","Нитрид титана","Золотистое твёрдое покрытие. Сверла, ювелирка."],
+      ["Zr","ZrN","Нитрид циркония","Твёрдое покрытие. Декоративное."]
+    ];
+    nitrides.forEach(([m, f, n, e]) => add(m+"+N", f, n, "Синтез", "Ионная / ковалентная", "Нитрид.", e));
+
+    // --- Carbides ---
+    const carbides = [
+      ["Si","SiC","Карбид кремния","Карборунд. Абразив, полупроводник, бронекерамика."],
+      ["B","B₄C","Карбид бора","Один из самых твёрдых. Бронежилеты, абразив."],
+      ["W","WC","Карбид вольфрама","Сверхтвёрдый. Резцы, свёрла, броня."],
+      ["Ti","TiC","Карбид титана","Твёрдое покрытие, керамика."],
+      ["Ca","CaC₂","Карбид кальция","Для получения ацетилена: CaC₂ + 2H₂O → C₂H₂ + Ca(OH)₂."],
+      ["Al","Al₄C₃","Карбид алюминия","Реагирует с водой → метан."],
+      ["Fe","Fe₃C","Цементит","Карбид железа в стали и чугуне. Определяет твёрдость."],
+      ["U","UC","Карбид урана","Ядерное топливо (альтернатива UO₂)."],
+      ["Ta","TaC","Карбид тантала","Очень тугоплавкий. Резцы."]
+    ];
+    carbides.forEach(([m, f, n, e]) => add(m+"+C", f, n, "Синтез", "Ковалентная / металлическая", "Карбид.", e));
+
+    // --- Hydroxides ---
+    const hydroxides = [
+      ["Na","NaOH","Гидроксид натрия","Едкий натр. Сильная щёлочь. Мыло, бумага."],
+      ["K","KOH","Гидроксид калия","Едкое кали. Жидкое мыло, батареи."],
+      ["Ca","Ca(OH)₂","Гидроксид кальция","Гашёная известь. Строительство, известковая вода."],
+      ["Mg","Mg(OH)₂","Гидроксид магния","Молоко магнезии. Антацид."],
+      ["Al","Al(OH)₃","Гидроксид алюминия","Амфотерный. Антацид, коагулянт."],
+      ["Ba","Ba(OH)₂","Гидроксид бария","Сильная щёлочь. Титриметрия."],
+      ["Fe","Fe(OH)₃","Гидроксид железа(III)","Ржавчина в гидратированной форме. Бурый осадок."],
+      ["Cu","Cu(OH)₂","Гидроксид меди(II)","Голубой осадок. При нагреве → CuO."]
+    ];
+    hydroxides.forEach(([m, f, n, e]) => {
+      add(m+"+H+O", f, n, "Синтез / гидролиз", "Ионная", "Гидроксид (щёлочь или основание).", e);
+      add(m+"+O+H", f, n, "Синтез / гидролиз", "Ионная", "Гидроксид.", e);
+    });
+
+    // --- Important acids & salts with polyatomic ---
+    add("H+S+O", "H₂SO₄", "Серная кислота", "Синтез", "Ковалентная / ионная в р-ре", "Важнейшая промышленная кислота.", "Производство: контактный метод. «Хлеб химической промышленности».");
+    add("H+N+O", "HNO₃", "Азотная кислота", "Синтез", "Ковалентная / ионная", "Сильная кислота-окислитель.", "Царская водка = HNO₃ + HCl. Удобрения, взрывчатка.");
+    add("H+P+O", "H₃PO₄", "Фосфорная кислота", "Синтез", "Ковалентная / ионная", "Удобрения, пищевая добавка (E338).", "Средней силы. В газировке и зубных пастах.");
+    add("H+C+O", "H₂CO₃", "Угольная кислота", "Синтез", "Ковалентная", "Слабая. Существует только в растворе.", "CO₂ + H₂O ⇌ H₂CO₃. Отвечает за вкус газировки.");
+
+    // Sulfates, nitrates, carbonates
+    const oxosalts = [
+      ["Na","S+O","Na₂SO₄","Сульфат натрия","Глауберова соль. Слабительное, стекло."],
+      ["K","S+O","K₂SO₄","Сульфат калия","Калийное удобрение."],
+      ["Ca","S+O","CaSO₄","Сульфат кальция","Гипс (CaSO₄·2H₂O). Строительство."],
+      ["Ba","S+O","BaSO₄","Сульфат бария","Рентгеноконтрастное вещество. Нерастворим."],
+      ["Cu","S+O","CuSO₄","Сульфат меди(II)","Медный купорос. Фунгицид, электролит."],
+      ["Fe","S+O","FeSO₄","Сульфат железа(II)","Железный купорос. Чернила, медицина."],
+      ["Mg","S+O","MgSO₄","Сульфат магния","Английская соль. Слабительное, ванны."],
+      ["Zn","S+O","ZnSO₄","Сульфат цинка","Белый купорос. Медицина, гальваника."],
+      ["Al","S+O","Al₂(SO₄)₃","Сульфат алюминия","Коагулянт для очистки воды."],
+      ["Na","N+O","NaNO₃","Нитрат натрия","Чилийская селитра. Удобрение, консервант."],
+      ["K","N+O","KNO₃","Нитрат калия","Калийная селитра. Порох, удобрение."],
+      ["Ca","N+O","Ca(NO₃)₂","Нитрат кальция","Удобрение. Гигроскопичен."],
+      ["Ag","N+O","AgNO₃","Нитрат серебра","Ляпис. Антисептик, аналитика."],
+      ["Pb","N+O","Pb(NO₃)₂","Нитрат свинца","Окислитель. Ранее в пиротехнике."],
+      ["Na","C+O","Na₂CO₃","Карбонат натрия","Кальцинированная сода. Моющие средства, стекло."],
+      ["K","C+O","K₂CO₃","Карбонат калия","Поташ. Мыло, стекло."],
+      ["Ca","C+O","CaCO₃","Карбонат кальция","Мел, известняк, мрамор, раковины.", "CaCO₃ → CaO + CO₂ (при обжиге)."],
+      ["Mg","C+O","MgCO₃","Карбонат магния","Магнезит. Огнеупоры, спорт (магнезия)."],
+      ["Ba","C+O","BaCO₃","Карбонат бария","Крысиный яд (токсичен). Керамика."],
+      ["Na","H+C+O","NaHCO₃","Гидрокарбонат натрия","Пищевая сода. Разрыхлитель, антацид."],
+      ["Ca","H+C+O","Ca(HCO₃)₂","Гидрокарбонат кальция","Временная жёсткость воды. Существует только в р-ре."]
+    ];
+    oxosalts.forEach(([m, rest, f, n, e]) => {
+      add(m+"+"+rest, f, n, "Синтез / обмен", "Ионная", n + ".", e);
+      // also reverse order variants
+      const parts = rest.split("+");
+      if (parts.length === 2) add(m+"+"+parts[1]+"+"+parts[0], f, n, "Синтез / обмен", "Ионная", n+".", e);
+    });
+
+    // --- Special & more ---
+    add("C+S", "CS₂", "Сероуглерод", "Синтез", "Ковалентная", "Растворитель. Токсичен, огнеопасен.", "Ранее для вулканизации и вискозы.");
+    add("C+Cl", "CCl₄", "Тетрахлорметан", "Синтез", "Ковалентная", "Растворитель (устарел). Озоноразрушающий.", "Запрещён в многих применениях.");
+    add("P+Cl", "PCl₃", "Трихлорид фосфора", "Синтез", "Ковалентная", "Важный реагент в органике.", "PCl₃ + Cl₂ ⇌ PCl₅.");
+    add("P+Cl+Cl", "PCl₅", "Пентахлорид фосфора", "Синтез", "Ковалентная", "Хлорирующий агент.", "Сильный хлорирующий реагент для спиртов и кислот.");
+    add("S+Cl", "S₂Cl₂", "Дихлорид дисеры", "Синтез", "Ковалентная", "Вулканизация каучука.", "Жёлтая маслянистая жидкость.");
+    add("B+F", "BF₃", "Трифторид бора", "Синтез", "Ковалентная", "Кислота Льюиса. Катализатор.", "Плоская молекула. Принимает электронную пару.");
+    add("S+F", "SF₆", "Гексафторид серы", "Синтез", "Ковалентная", "Инертный газ. Электроизолятор.", "Один из самых мощных парниковых газов. Октаэдр.");
+    add("U+F", "UF₆", "Гексафторид урана", "Синтез", "Ковалентная", "Для обогащения урана.", "Летучий. Используется в газовых центрифугах.");
+    add("Si+F", "SiF₄", "Тетрафторид кремния", "Синтез", "Ковалентная", "Газ. Образуется при реакции HF с силикатами.", "SiO₂ + 4HF → SiF₄ + 2H₂O.");
+    add("Xe+F", "XeF₂", "Дифторид ксенона", "Синтез", "Ковалентная", "Одно из первых соединений благородного газа.", "Линейная молекула. Доказательство, что «инертные» газы не совсем инертны.");
+    add("Xe+F+F", "XeF₄", "Тетрафторид ксенона", "Синтез", "Ковалентная", "Плоский квадрат.", "Получен в 1962 г. — революция в химии.");
+    add("Xe+O", "XeO₃", "Триоксид ксенона", "Синтез", "Ковалентная", "Взрывоопасен.", "Сильный окислитель. Осторожно!");
+    add("Kr+F", "KrF₂", "Дифторид криптона", "Синтез", "Ковалентная", "Редкое соединение криптона.", "Менее стабилен, чем XeF₂.");
+    add("C+N", "C₂N₂", "Дициан", "Синтез", "Ковалентная", "Токсичный газ. «Циан».", "Горит фиолетовым пламенем.");
+    add("H+C+N", "HCN", "Циановодород", "Синтез", "Ковалентная", "Синильная кислота. Крайне ядовита.", "Запах горького миндаля. Ингибирует клеточное дыхание.");
+
+    // Phosphides, arsenides etc.
+    add("Ca+P", "Ca₃P₂", "Фосфид кальция", "Синтез", "Ионная", "Реагирует с водой → PH₃.", "Использовался в сигнальных огнях.");
+    add("Al+P", "AlP", "Фосфид алюминия", "Синтез", "Ковалентная / ионная", "Фумигант (выделяет PH₃).", "Средство от грызунов.");
+    add("Ga+As", "GaAs", "Арсенид галлия", "Синтез", "Ковалентная", "Полупроводник. СВЧ, лазеры, солнечные батареи.", "Быстрее кремния в высокочастотной электронике.");
+    add("In+P", "InP", "Фосфид индия", "Синтез", "Ковалентная", "Оптоэлектроника, фотодетекторы.", "Важен для оптоволокна.");
+    add("Cd+Te", "CdTe", "Теллурид кадмия", "Синтез", "Ковалентная", "Тонкоплёночные солнечные батареи.", "Один из лидеров по эффективности среди тонких плёнок.");
+    add("Zn+Se", "ZnSe", "Селенид цинка", "Синтез", "Ковалентная", "ИК-оптика, лазеры.", "Прозрачен в инфракрасном диапазоне.");
+    add("Pb+Se", "PbSe", "Селенид свинца", "Синтез", "Ковалентная", "ИК-детекторы.", "Узкозонный полупроводник.");
+    add("Pb+Te", "PbTe", "Теллурид свинца", "Синтез", "Ковалентная", "Термоэлектрики, ИК.", "Хороший термоэлектрический материал.");
+
+    // More oxides & mixed
+    add("H+O+O", "H₂O₂", "Пероксид водорода", "Синтез", "Ковалентная", "Перекись водорода. Отбеливатель, антисептик.", "Разлагается: 2H₂O₂ → 2H₂O + O₂ (катализ MnO₂).");
+    add("Na+O+O", "Na₂O₂", "Пероксид натрия", "Синтез", "Ионная", "Сильный окислитель. Источник O₂.", "Na₂O₂ + 2H₂O → 2NaOH + H₂O₂.");
+    add("Ba+O+O", "BaO₂", "Пероксид бария", "Синтез", "Ионная", "Исторический источник O₂ и H₂O₂.", "Использовался в процессе Брина.");
+
+    // Count total
+
+    // ========== EXTRA: compound chains + more reactions ==========
+    // Helper: store rich metadata
+    function addRich(key, formula, sci, common, type, bond, desc, edu) {
+      REACTIONS[key] = {
+        formula, name: sci, sci, common: common || sci,
+        type, bond, desc, edu
+      };
+    }
+    // Upgrade existing entries that only have name -> sci/common
+    Object.keys(REACTIONS).forEach(k => {
+      const r = REACTIONS[k];
+      if (!r.sci) r.sci = r.name;
+      if (!r.common) r.common = r.name;
+    });
+
+    // --- Water chemistry ---
+    addRich("H₂O+Na", "NaOH", "Гидроксид натрия", "Едкий натр, каустическая сода", "Обмен / щелочь", "Ионная",
+      "Сильная щёлочь. Белые гигроскопичные гранулы или раствор.",
+      "Na + H₂O → NaOH + ½H₂. В мыловарении, очистке труб, производстве бумаги.");
+    addRich("H₂O+K", "KOH", "Гидроксид калия", "Едкое кали", "Обмен / щелочь", "Ионная",
+      "Сильная щёлочь, похожа на NaOH.",
+      "Используется в жидком мыле, щелочных батареях, биодизеле.");
+    addRich("H₂O+CaO", "Ca(OH)₂", "Гидроксид кальция", "Гашёная известь", "Гидратация", "Ионная",
+      "Белый порошок/суспензия «известковое молоко».",
+      "CaO + H₂O → Ca(OH)₂ + тепло. Строительство, известковая вода.");
+    addRich("CaO+H₂O", "Ca(OH)₂", "Гидроксид кальция", "Гашёная известь", "Гидратация", "Ионная",
+      "Гашение извести.", "Строительные растворы, обработка почвы.");
+    addRich("H₂O+CO₂", "H₂CO₃", "Угольная кислота", "Кислота газировки", "Растворение", "Ковалентная",
+      "Слабая кислота, существует в основном в растворе.",
+      "CO₂ + H₂O ⇌ H₂CO₃. Даёт кисловатый вкус газированных напитков.");
+    addRich("CO₂+H₂O", "H₂CO₃", "Угольная кислота", "Кислота газировки", "Растворение", "Ковалентная",
+      "Равновесие в воде.", "Дыхание, газировка, пещеры (карст).");
+    addRich("Ca(OH)₂+CO₂", "CaCO₃", "Карбонат кальция", "Мел, известняк, мрамор", "Осаждение", "Ионная",
+      "Белый осадок: «известковая вода мутнеет».",
+      "Ca(OH)₂ + CO₂ → CaCO₃↓ + H₂O. Классический школьный опыт.");
+    addRich("CO₂+Ca(OH)₂", "CaCO₃", "Карбонат кальция", "Мел, известняк", "Осаждение", "Ионная",
+      "Мутнение известковой воды.", "Детектирование CO₂.");
+
+    // Acids + bases / metals
+    addRich("HCl+NaOH", "NaCl", "Хлорид натрия", "Поваренная соль", "Нейтрализация", "Ионная",
+      "Нейтрализация: кислота + щёлочь → соль + вода.",
+      "HCl + NaOH → NaCl + H₂O. Соль — пищевая и техническая.");
+    addRich("NaOH+HCl", "NaCl", "Хлорид натрия", "Поваренная соль", "Нейтрализация", "Ионная",
+      "Нейтрализация.", "Получается пищевая соль и вода.");
+    addRich("HCl+KOH", "KCl", "Хлорид калия", "Калийная соль", "Нейтрализация", "Ионная",
+      "Белая соль, удобрение.", "KCl — источник калия для растений.");
+    addRich("H₂SO₄+NaOH", "Na₂SO₄", "Сульфат натрия", "Глауберова соль", "Нейтрализация", "Ионная",
+      "Белая соль, слабительное (декагидрат).", "Стекольная промышленность.");
+    addRich("HNO₃+NaOH", "NaNO₃", "Нитрат натрия", "Чилийская селитра", "Нейтрализация", "Ионная",
+      "Окислитель, удобрение.", "Исторически добывали в Чили.");
+    addRich("HCl+Zn", "ZnCl₂", "Хлорид цинка", "Хлористый цинк", "Замещение", "Ионная",
+      "Металл + кислота → соль + водород.",
+      "Zn + 2HCl → ZnCl₂ + H₂. Флюс для пайки, антисептик.");
+    addRich("Zn+HCl", "ZnCl₂", "Хлорид цинка", "Хлористый цинк", "Замещение", "Ионная",
+      "Выделение водорода.", "Школьный опыт получения H₂.");
+    addRich("HCl+Fe", "FeCl₂", "Хлорид железа(II)", "Хлористое железо", "Замещение", "Ионная",
+      "Зеленоватый раствор.", "Fe + 2HCl → FeCl₂ + H₂.");
+    addRich("Fe+HCl", "FeCl₂", "Хлорид железа(II)", "Хлористое железо", "Замещение", "Ионная",
+      "Соль железа.", "Дальше может окисляться до FeCl₃.");
+    addRich("HCl+Mg", "MgCl₂", "Хлорид магния", "Бишофит (в природе)", "Замещение", "Ионная",
+      "Горькая соль морской воды.", "Mg + 2HCl → MgCl₂ + H₂.");
+    addRich("Mg+HCl", "MgCl₂", "Хлорид магния", "Бишофит", "Замещение", "Ионная",
+      "Активный металл + кислота.", "Бурная реакция с выделением H₂.");
+    addRich("H₂SO₄+Zn", "ZnSO₄", "Сульфат цинка", "Белый купорос", "Замещение", "Ионная",
+      "Белая соль, медицина, гальваника.", "Zn + H₂SO₄ → ZnSO₄ + H₂.");
+    addRich("Zn+H₂SO₄", "ZnSO₄", "Сульфат цинка", "Белый купорос", "Замещение", "Ионная",
+      "Купорос.", "Раствор бесцветный.");
+    addRich("H₂SO₄+CuO", "CuSO₄", "Сульфат меди(II)", "Медный купорос", "Обмен", "Ионная",
+      "Синие кристаллы пентагидрата.", "Фунгицид, электролит, школьные опыты.");
+    addRich("CuO+H₂SO₄", "CuSO₄", "Сульфат меди(II)", "Медный купорос", "Обмен", "Ионная",
+      "Синий раствор.", "CuO + H₂SO₄ → CuSO₄ + H₂O.");
+    addRich("HCl+CuO", "CuCl₂", "Хлорид меди(II)", "Хлористая медь", "Обмен", "Ионная",
+      "Зелёно-голубой раствор.", "Катализ, пиротехника.");
+    addRich("CuO+HCl", "CuCl₂", "Хлорид меди(II)", "Хлористая медь", "Обмен", "Ионная",
+      "Соль меди.", "Из оксида меди и HCl.");
+
+    // Oxides formation already exist; chain
+    addRich("SO₂+H₂O", "H₂SO₃", "Сернистая кислота", "Кислота «сернистого газа»", "Растворение", "Ковалентная",
+      "Слабая кислота, неустойчива.", "SO₂ + H₂O ⇌ H₂SO₃. Кислотные дожди.");
+    addRich("H₂O+SO₂", "H₂SO₃", "Сернистая кислота", "Кислота сернистого газа", "Растворение", "Ковалентная",
+      "В растворе.", "Запах жжёной серы.");
+    addRich("SO₃+H₂O", "H₂SO₄", "Серная кислота", "Купоросное масло (устар.)", "Гидратация", "Ковалентная/ионная",
+      "Важнейшая промышленная кислота.", "SO₃ + H₂O → H₂SO₄. Контактный метод.");
+    addRich("H₂O+SO₃", "H₂SO₄", "Серная кислота", "Купоросное масло", "Гидратация", "Ковалентная/ионная",
+      "Сильная кислота.", "Осторожно: сильный окислитель в конц. виде.");
+    addRich("NO₂+H₂O", "HNO₃", "Азотная кислота", "Селитряная кислота (устар.)", "Диспропорционирование", "Ковалентная/ионная",
+      "Сильная кислота-окислитель.", "Участвует в цикле получения HNO₃.");
+    addRich("H₂O+NO₂", "HNO₃", "Азотная кислота", "Селитряная кислота", "Реакция", "Ковалентная/ионная",
+      "Из диоксида азота.", "Царская водка = HNO₃ + HCl.");
+    addRich("P₄O₁₀+H₂O", "H₃PO₄", "Фосфорная кислота", "Ортофосфорная кислота", "Гидратация", "Ковалентная/ионная",
+      "Средней силы, в газировке и удобрениях.", "P₄O₁₀ + 6H₂O → 4H₃PO₄.");
+    addRich("H₂O+P₄O₁₀", "H₃PO₄", "Фосфорная кислота", "Ортофосфорная кислота", "Гидратация", "Ковалентная/ионная",
+      "Пищевая добавка E338.", "Удобрения, антикоррозия.");
+
+    // Carbonates + acid
+    addRich("CaCO₃+HCl", "CaCl₂", "Хлорид кальция", "Хлористый кальций", "Обмен", "Ионная",
+      "Соль + CO₂ + H₂O. Шипение!",
+      "CaCO₃ + 2HCl → CaCl₂ + CO₂↑ + H₂O. Опыт с мрамором/мелом.");
+    addRich("HCl+CaCO₃", "CaCl₂", "Хлорид кальция", "Хлористый кальций", "Обмен", "Ионная",
+      "Выделение CO₂.", "Проверка карбонатов кислотой.");
+    addRich("Na₂CO₃+HCl", "NaCl", "Хлорид натрия", "Поваренная соль", "Обмен", "Ионная",
+      "Сода + кислота → соль + CO₂ + вода.",
+      "Na₂CO₃ + 2HCl → 2NaCl + CO₂ + H₂O.");
+    addRich("HCl+Na₂CO₃", "NaCl", "Хлорид натрия", "Поваренная соль", "Обмен", "Ионная",
+      "Шипение соды.", "Кухонный опыт с уксусом похож по сути.");
+    addRich("NaHCO₃+HCl", "NaCl", "Хлорид натрия", "Поваренная соль", "Обмен", "Ионная",
+      "Пищевая сода + кислота.", "NaHCO₃ + HCl → NaCl + CO₂ + H₂O.");
+    addRich("HCl+NaHCO₃", "NaCl", "Хлорид натрия", "Поваренная соль", "Обмен", "Ионная",
+      "Гашение соды.", "Разрыхление теста — тот же принцип с кислотой.");
+
+    // Ammonia
+    addRich("NH₃+HCl", "NH₄Cl", "Хлорид аммония", "Нашатырь", "Нейтрализация", "Ионная",
+      "Белый «дым» при встрече газов NH₃ и HCl.",
+      "NH₃ + HCl → NH₄Cl. Нашатырный спирт + кислота.");
+    addRich("HCl+NH₃", "NH₄Cl", "Хлорид аммония", "Нашатырь", "Нейтрализация", "Ионная",
+      "Соль аммония.", "Электролиты, пайка, медицина.");
+    addRich("NH₃+H₂O", "NH₃·H₂O", "Гидрат аммиака", "Нашатырный спирт", "Растворение", "Ковалентная",
+      "Щелочной раствор с резким запахом.", "NH₃ + H₂O ⇌ NH₄⁺ + OH⁻.");
+    addRich("H₂O+NH₃", "NH₃·H₂O", "Гидрат аммиака", "Нашатырный спирт", "Растворение", "Ковалентная",
+      "Бытовой нашатырь.", "Чистка, стимуляция дыхания (осторожно!).");
+    addRich("NH₃+H₂SO₄", "(NH₄)₂SO₄", "Сульфат аммония", "Аммоний сернокислый", "Нейтрализация", "Ионная",
+      "Азотное удобрение.", "2NH₃ + H₂SO₄ → (NH₄)₂SO₄.");
+    addRich("H₂SO₄+NH₃", "(NH₄)₂SO₄", "Сульфат аммония", "Аммоний сернокислый", "Нейтрализация", "Ионная",
+      "Удобрение.", "Широко в сельском хозяйстве.");
+    addRich("NH₃+HNO₃", "NH₄NO₃", "Нитрат аммония", "Аммиачная селитра", "Нейтрализация", "Ионная",
+      "Удобрение и компонент ВВ (опасно в смеси).",
+      "NH₃ + HNO₃ → NH₄NO₃. Только как учебный факт!");
+
+    // More binary
+    addRich("Fe+S", "FeS", "Сульфид железа(II)", "Сернистое железо", "Синтез", "Ионная/ковалентная",
+      "Чёрное вещество, из пирита FeS₂ другой состав.", "Классический опыт нагрева Fe+S.");
+    addRich("S+Fe", "FeS", "Сульфид железа(II)", "Сернистое железо", "Синтез", "Ионная/ковалентная",
+      "Бинарный сульфид.", "С водой/кислотой даёт H₂S.");
+    addRich("FeS+HCl", "H₂S", "Сероводород", "Сернистый водород", "Обмен", "Ковалентная",
+      "Газ с запахом тухлых яиц, ядовит.", "FeS + 2HCl → FeCl₂ + H₂S↑.");
+    addRich("HCl+FeS", "H₂S", "Сероводород", "Сернистый водород", "Обмен", "Ковалентная",
+      "Получение H₂S в лаборатории.", "Работать только в тяге!");
+    addRich("Cu+S", "CuS", "Сульфид меди(II)", "Сернистая медь", "Синтез", "Ионная/ковалентная",
+      "Чёрный сульфид.", "Минерал ковеллин.");
+    addRich("S+Cu", "CuS", "Сульфид меди(II)", "Сернистая медь", "Синтез", "Ионная/ковалентная",
+      "Сульфид.", "Руда меди.");
+    addRich("Al+S", "Al₂S₃", "Сульфид алюминия", "Сернистый алюминий", "Синтез", "Ионная",
+      "Реагирует с водой с выделением H₂S.", "Al₂S₃ + 6H₂O → 2Al(OH)₃ + 3H₂S.");
+    addRich("S+Al", "Al₂S₃", "Сульфид алюминия", "Сернистый алюминий", "Синтез", "Ионная",
+      "Гидролизуется.", "Не хранить на воздухе во влажном виде.");
+
+    // Carbides chain
+    addRich("CaC₂+H₂O", "C₂H₂", "Ацетилен", "Этин, сварочный газ", "Гидролиз", "Ковалентная",
+      "Горючий газ, коптящее яркое пламя.",
+      "CaC₂ + 2H₂O → C₂H₂↑ + Ca(OH)₂. Сварка, история освещения.");
+    addRich("H₂O+CaC₂", "C₂H₂", "Ацетилен", "Этин", "Гидролиз", "Ковалентная",
+      "Из карбида кальция.", "Характерный запах технического ацетилена.");
+
+    // More oxides / salts
+    addRich("Na₂O+H₂O", "NaOH", "Гидроксид натрия", "Едкий натр", "Гидратация", "Ионная",
+      "Основный оксид + вода → щёлочь.", "Na₂O + H₂O → 2NaOH.");
+    addRich("H₂O+Na₂O", "NaOH", "Гидроксид натрия", "Едкий натр", "Гидратация", "Ионная",
+      "Щёлочь.", "Сильно разъедает органику.");
+    addRich("K₂O+H₂O", "KOH", "Гидроксид калия", "Едкое кали", "Гидратация", "Ионная",
+      "Щёлочь.", "K₂O + H₂O → 2KOH.");
+    addRich("H₂O+K₂O", "KOH", "Гидроксид калия", "Едкое кали", "Гидратация", "Ионная",
+      "Из оксида калия.", "Гигроскопичен.");
+    addRich("MgO+H₂O", "Mg(OH)₂", "Гидроксид магния", "Молоко магнезии", "Гидратация", "Ионная",
+      "Слабо растворимое основание, антацид.", "От изжоги (фармация).");
+    addRich("H₂O+MgO", "Mg(OH)₂", "Гидроксид магния", "Молоко магнезии", "Гидратация", "Ионная",
+      "Медленная реакция.", "Аптечный антацид.");
+    addRich("CO₂+NaOH", "Na₂CO₃", "Карбонат натрия", "Кальцинированная сода", "Поглощение", "Ионная",
+      "Щёлочь поглощает CO₂.", "2NaOH + CO₂ → Na₂CO₃ + H₂O (при избытке CO₂ → NaHCO₃).");
+    addRich("NaOH+CO₂", "Na₂CO₃", "Карбонат натрия", "Кальцинированная сода", "Поглощение", "Ионная",
+      "Сода.", "Моющие средства, стекло.");
+    addRich("CO₂+NaOH+NaOH", "Na₂CO₃", "Карбонат натрия", "Кальцинированная сода", "Поглощение", "Ионная",
+      "Избыток щёлочи.", "Промышленное значение.");
+    addRich("NaOH+CO₂+H₂O", "NaHCO₃", "Гидрокарбонат натрия", "Пищевая сода", "Поглощение", "Ионная",
+      "Пищевая сода.", "Выпечка, изжога, пожаротушение класса B (малые очаги).");
+    addRich("CO₂+NaOH+H₂O", "NaHCO₃", "Гидрокарбонат натрия", "Пищевая сода", "Поглощение", "Ионная",
+      "Гидрокарбонат.", "NaOH + CO₂ → NaHCO₃ (условия).");
+
+    // Combustion-like
+    addRich("CH₄+O", "CO₂", "Диоксид углерода", "Углекислый газ", "Горение", "Ковалентная",
+      "Продукт полного сгорания метана (с водой).",
+      "CH₄ + 2O₂ → CO₂ + 2H₂O. Главный парниковый газ сжигания.");
+    addRich("O+CH₄", "CO₂", "Диоксид углерода", "Углекислый газ", "Горение", "Ковалентная",
+      "Горение метана.", "Синий огонь кухонной горелки — метан.");
+    addRich("C₂H₂+O", "CO₂", "Диоксид углерода", "Углекислый газ", "Горение", "Ковалентная",
+      "Горение ацетилена даёт много тепла.", "Сварка ацетилен-кислород.");
+    addRich("O+C₂H₂", "CO₂", "Диоксид углерода", "Углекислый газ", "Горение", "Ковалентная",
+      "Продукты горения C и H.", "Яркое пламя.");
+
+    // AgNO3 precip classic
+    addRich("AgNO₃+HCl", "AgCl", "Хлорид серебра", "Хлористое серебро", "Осаждение", "Ионная",
+      "Белый творожистый осадок, темнеет на свету.",
+      "AgNO₃ + HCl → AgCl↓ + HNO₃. Качественная реакция на Cl⁻.");
+    addRich("HCl+AgNO₃", "AgCl", "Хлорид серебра", "Хлористое серебро", "Осаждение", "Ионная",
+      "Осадок AgCl.", "Основа старой фотографии.");
+    addRich("AgNO₃+NaCl", "AgCl", "Хлорид серебра", "Хлористое серебро", "Осаждение", "Ионная",
+      "Из соли и ляписа.", "Ag⁺ + Cl⁻ → AgCl↓.");
+    addRich("NaCl+AgNO₃", "AgCl", "Хлорид серебра", "Хлористое серебро", "Осаждение", "Ионная",
+      "Белый осадок.", "Аналитическая химия.");
+
+    // BaSO4
+    addRich("BaCl₂+H₂SO₄", "BaSO₄", "Сульфат бария", "Баритовая взвесь", "Осаждение", "Ионная",
+      "Белый нерастворимый осадок. Контраст в рентгене ЖКТ.",
+      "BaCl₂ + H₂SO₄ → BaSO₄↓ + 2HCl. Качественная реакция на SO₄²⁻.");
+    addRich("H₂SO₄+BaCl₂", "BaSO₄", "Сульфат бария", "Барит (минерал)", "Осаждение", "Ионная",
+      "Нерастворим.", "Рентгеноконтрастное вещество.");
+    addRich("BaCl₂+Na₂SO₄", "BaSO₄", "Сульфат бария", "Барит", "Осаждение", "Ионная",
+      "Осадок.", "Аналитика сульфатов.");
+    addRich("Na₂SO₄+BaCl₂", "BaSO₄", "Сульфат бария", "Барит", "Осаждение", "Ионная",
+      "Белый осадок.", "Не путать с растворимым BaCl₂ (ядовит!).");
+
+    // More element combos
+    addRich("Al+Cl", "AlCl₃", "Хлорид алюминия", "Хлористый алюминий", "Синтез", "Ионная/ковалентная",
+      "Дымит на воздухе, катализатор.", "Реакция Фриделя–Крафтса.");
+    addRich("Cl+Al", "AlCl₃", "Хлорид алюминия", "Хлористый алюминий", "Синтез", "Ионная/ковалентная",
+      "Льюисова кислота.", "Органический синтез.");
+    addRich("Fe+Cl", "FeCl₃", "Хлорид железа(III)", "Хлорное железо", "Синтез", "Ионная",
+      "Тёмная соль, травление плат, коагулянт.", "Fe + 1½Cl₂ → FeCl₃.");
+    addRich("Cl+Fe", "FeCl₃", "Хлорид железа(III)", "Хлорное железо", "Синтез", "Ионная",
+      "Коагулянт воды.", "Оранжево-коричневые растворы.");
+    addRich("Cu+Cl", "CuCl₂", "Хлорид меди(II)", "Хлористая медь", "Синтез", "Ионная",
+      "Зелёные кристаллы.", "Катализ, пиротехника.");
+    addRich("Cl+Cu", "CuCl₂", "Хлорид меди(II)", "Хлористая медь", "Синтез", "Ионная",
+      "Соль меди.", "Гигроскопичен.");
+    addRich("H+O+O", "H₂O₂", "Пероксид водорода", "Перекись водорода", "Синтез", "Ковалентная",
+      "Бесцветная жидкость, антисептик 3%.", "2H₂O₂ → 2H₂O + O₂ (разложение, MnO₂).");
+    addRich("O+H+O", "H₂O₂", "Пероксид водорода", "Перекись водорода", "Синтез", "Ковалентная",
+      "Окислитель.", "Отбеливание, обработка ран (разбавленный).");
+
+    // Refresh total
+    window.TOTAL_KNOWN = Object.keys(REACTIONS).length;
+
+
+    // ===== Chemix extra reactions batch =====
+    addRich("H+N", "NH₃", "Аммиак", "Нашатырный газ", "Синтез", "Ковалентная",
+      "Бесцветный газ с резким запахом.", "Основа синтеза Габера–Боша; нашатырный спирт — раствор в воде.");
+    addRich("N+H", "NH₃", "Аммиак", "Нашатырный газ", "Синтез", "Ковалентная",
+      "NH₃.", "Удобрения, холодильная техника.");
+    addRich("C+O+O", "CO₂", "Диоксид углерода", "Углекислый газ", "Горение", "Ковалентная",
+      "Продукт полного сгорания углерода.", "Газировка, сухое льдо, дыхание.");
+    addRich("O+C+O", "CO₂", "Диоксид углерода", "Углекислый газ", "Горение", "Ковалентная",
+      "CO₂.", "Парниковый газ.");
+    addRich("C+O", "CO", "Монооксид углерода", "Угарный газ", "Неполное горение", "Ковалентная",
+      "Ядовитый бесцветный газ без запаха.", "Неполное сгорание; опасен в помещениях.");
+    addRich("O+C", "CO", "Монооксид углерода", "Угарный газ", "Неполное горение", "Ковалентная",
+      "CO.", "Связывается с гемоглобином.");
+    addRich("S+O", "SO₂", "Диоксид серы", "Сернистый газ", "Горение", "Ковалентная",
+      "Газ с резким запахом жжёной серы.", "Кислотные дожди, консервант (E220).");
+    addRich("O+S", "SO₂", "Диоксид серы", "Сернистый газ", "Горение", "Ковалентная",
+      "SO₂.", "Вулканы, сжигание серы.");
+    addRich("S+O+O", "SO₃", "Триоксид серы", "Серный ангидрид", "Окисление", "Ковалентная",
+      "Реагирует с водой → H₂SO₄.", "Контактный метод серной кислоты.");
+    addRich("O+S+O", "SO₃", "Триоксид серы", "Серный ангидрид", "Окисление", "Ковалентная",
+      "SO₃.", "Промышленный ключ к H₂SO₄.");
+    addRich("N+O", "NO", "Оксид азота(II)", "Окись азота", "Синтез", "Ковалентная",
+      "Бесцветный газ, на воздухе буреет → NO₂.", "Промежуточный продукт азотной кислоты.");
+    addRich("O+N", "NO", "Оксид азота(II)", "Окись азота", "Синтез", "Ковалентная",
+      "NO.", "Выхлопные газы, гроза.");
+    addRich("N+O+O", "NO₂", "Диоксид азота", "Бурый газ", "Окисление", "Ковалентная",
+      "Бурый ядовитый газ.", "Из NO на воздухе; кислотные дожди.");
+    addRich("O+N+O", "NO₂", "Диоксид азота", "Бурый газ", "Окисление", "Ковалентная",
+      "NO₂.", "Острый запах.");
+    addRich("P+O", "P₄O₁₀", "Оксид фосфора(V)", "Фосфорный ангидрид", "Горение", "Ковалентная",
+      "Белый гигроскопичный порошок.", "Сильный осушитель; с водой → H₃PO₄.");
+    addRich("O+P", "P₄O₁₀", "Оксид фосфора(V)", "Фосфорный ангидрид", "Горение", "Ковалентная",
+      "P₄O₁₀.", "Горение белого фосфора.");
+    addRich("H+S", "H₂S", "Сероводород", "Сернистый водород", "Синтез", "Ковалентная",
+      "Газ с запахом тухлых яиц, ядовит.", "Вулканы, гниение; качественная реакция на ионы S²⁻.");
+    addRich("S+H", "H₂S", "Сероводород", "Сернистый водород", "Синтез", "Ковалентная",
+      "H₂S.", "Работать только в тяге.");
+    addRich("H+Br", "HBr", "Бромоводород", "Бромистый водород", "Синтез", "Ковалентная",
+      "Бесцветный газ, раствор — сильная кислота.", "Органический синтез.");
+    addRich("Br+H", "HBr", "Бромоводород", "Бромистый водород", "Синтез", "Ковалентная",
+      "HBr.", "Аналог HCl среди бромидов.");
+    addRich("H+I", "HI", "Иодоводород", "Иодистый водород", "Синтез", "Ковалентная",
+      "Сильная кислота в растворе.", "Восстановитель в органике.");
+    addRich("I+H", "HI", "Иодоводород", "Иодистый водород", "Синтез", "Ковалентная",
+      "HI.", "Неустойчив на свету.");
+    addRich("Na+Br", "NaBr", "Бромид натрия", "Бромистый натрий", "Синтез", "Ионная",
+      "Белая соль.", "Медицина (устар.), фотография.");
+    addRich("Br+Na", "NaBr", "Бромид натрия", "Бромистый натрий", "Синтез", "Ионная",
+      "NaBr.", "Источник Br⁻.");
+    addRich("K+I", "KI", "Иодид калия", "Иодистый калий", "Синтез", "Ионная",
+      "Белая соль, защита щитовидки (по назначению).", "Раствор Люголя, аналитика.");
+    addRich("I+K", "KI", "Иодид калия", "Иодистый калий", "Синтез", "Ионная",
+      "KI.", "Йодная профилактика — только по инструкции.");
+    addRich("Ca+Cl", "CaCl₂", "Хлорид кальция", "Хлористый кальций", "Синтез", "Ионная",
+      "Гигроскопичная соль, осушитель.", "Противогололёд, осушение газов.");
+    addRich("Cl+Ca", "CaCl₂", "Хлорид кальция", "Хлористый кальций", "Синтез", "Ионная",
+      "CaCl₂.", "Осушитель в лаборатории.");
+    addRich("Mg+Cl", "MgCl₂", "Хлорид магния", "Бишофит", "Синтез", "Ионная",
+      "Горькая соль морской воды.", "Антиобледенитель, медицина.");
+    addRich("Cl+Mg", "MgCl₂", "Хлорид магния", "Бишофит", "Синтез", "Ионная",
+      "MgCl₂.", "Из морской воды.");
+    addRich("Al+O", "Al₂O₃", "Оксид алюминия", "Глинозём, корунд", "Горение", "Ионная",
+      "Твёрдый белый оксид, основа рубина/сапфира.", "Производство Al, абразивы, керамика.");
+    addRich("O+Al", "Al₂O₃", "Оксид алюминия", "Глинозём", "Горение", "Ионная",
+      "Al₂O₃.", "Амфотерный оксид.");
+    addRich("Fe+O", "Fe₂O₃", "Оксид железа(III)", "Ржавчина, гематит", "Окисление", "Ионная",
+      "Красно-бурый оксид.", "Ржавчина; руда железа.");
+    addRich("O+Fe", "Fe₂O₃", "Оксид железа(III)", "Ржавчина", "Окисление", "Ионная",
+      "Fe₂O₃.", "Пигмент, металлургия.");
+    addRich("Cu+O", "CuO", "Оксид меди(II)", "Оксид меди", "Окисление", "Ионная",
+      "Чёрный порошок.", "Школьные опыты восстановления водородом.");
+    addRich("O+Cu", "CuO", "Оксид меди(II)", "Оксид меди", "Окисление", "Ионная",
+      "CuO.", "Чёрный оксид.");
+    addRich("Zn+O", "ZnO", "Оксид цинка", "Цинковые белила", "Горение", "Ионная",
+      "Белый порошок.", "Мази, резина, полупроводники.");
+    addRich("O+Zn", "ZnO", "Оксид цинка", "Цинковые белила", "Горение", "Ионная",
+      "ZnO.", "Амфотерный оксид.");
+    addRich("Na+O", "Na₂O", "Оксид натрия", "Окись натрия", "Синтез", "Ионная",
+      "Основный оксид, с водой → NaOH.", "Не хранят на воздухе.");
+    addRich("O+Na", "Na₂O", "Оксид натрия", "Окись натрия", "Синтез", "Ионная",
+      "Na₂O.", "Сильно основный.");
+    addRich("K+O", "K₂O", "Оксид калия", "Окись калия", "Синтез", "Ионная",
+      "Основный оксид → KOH с водой.", "В удобрениях как «K₂O-эквивалент».");
+    addRich("O+K", "K₂O", "Оксид калия", "Окись калия", "Синтез", "Ионная",
+      "K₂O.", "Гигроскопичен.");
+    addRich("Ca+O", "CaO", "Оксид кальция", "Негашёная известь", "Горение", "Ионная",
+      "Белые комки, «кипит» с водой.", "CaO + H₂O → Ca(OH)₂ + тепло.");
+    addRich("O+Ca", "CaO", "Оксид кальция", "Негашёная известь", "Горение", "Ионная",
+      "CaO.", "Строительство, осушение.");
+    addRich("Mg+O", "MgO", "Оксид магния", "Жжёная магнезия", "Горение", "Ионная",
+      "Белый порошок, тугоплавкий.", "Огнеупоры, антацид.");
+    addRich("O+Mg", "MgO", "Оксид магния", "Жжёная магнезия", "Горение", "Ионная",
+      "MgO.", "Яркое горение Mg.");
+    addRich("HCl+NaHCO₃", "NaCl", "Хлорид натрия", "Поваренная соль", "Обмен", "Ионная",
+      "Сода + кислота → соль + CO₂ + H₂O.", "Шипение пищевой соды.");
+    addRich("NaHCO₃+HCl", "NaCl", "Хлорид натрия", "Поваренная соль", "Обмен", "Ионная",
+      "Классика гашения соды.", "Выпечка — тот же принцип.");
+    addRich("H₂SO₄+Cu", "CuSO₄", "Сульфат меди(II)", "Медный купорос", "Окисление (конц.)", "Ионная",
+      "С конц. H₂SO₄ при нагревании.", "Синие кристаллы пентагидрата.");
+    addRich("Cu+H₂SO₄", "CuSO₄", "Сульфат меди(II)", "Медный купорос", "Окисление", "Ионная",
+      "Не с разбавленной — только особые условия.", "Фунгицид, электролит.");
+    addRich("Ag+Cl", "AgCl", "Хлорид серебра", "Хлористое серебро", "Синтез", "Ионная",
+      "Белый светлочувствительный осадок.", "Основа старой фотографии.");
+    addRich("Cl+Ag", "AgCl", "Хлорид серебра", "Хлористое серебро", "Синтез", "Ионная",
+      "AgCl.", "Темнеет на свету.");
+    addRich("H₂O+Na₂O", "NaOH", "Гидроксид натрия", "Едкий натр", "Гидратация", "Ионная",
+      "Основный оксид + вода.", "Мыловарение, очистка.");
+    addRich("Na₂O+H₂O", "NaOH", "Гидроксид натрия", "Едкий натр", "Гидратация", "Ионная",
+      "2NaOH.", "Сильная щёлочь.");
+    addRich("CO₂+CaO", "CaCO₃", "Карбонат кальция", "Мел, известняк", "Синтез", "Ионная",
+      "CaO + CO₂ → CaCO₃.", "Печи, строительство.");
+    addRich("CaO+CO₂", "CaCO₃", "Карбонат кальция", "Мел, известняк", "Синтез", "Ионная",
+      "Карбонат.", "Мрамор, раковины.");
+    addRich("H₂O₂+MnO₂", "O₂", "Кислород", "Кислород", "Каталитическое разложение", "—",
+      "Перекись разлагается, катализатор MnO₂.", "2H₂O₂ → 2H₂O + O₂↑. Школьный опыт.");
+    addRich("MnO₂+H₂O₂", "O₂", "Кислород", "Кислород", "Катализ", "—",
+      "Бурное выделение O₂.", "Не глотать перекись.");
+
+    const TOTAL_KNOWN = Object.keys(REACTIONS).length;
+
+    // ========== STATE ==========
+    let reactor = [];
+    let discoveries = JSON.parse(localStorage.getItem("chemfusion_v2") || "[]");
+
+    // DOM
+    const grid = document.getElementById("elementsGrid");
+    const slotsEl = document.getElementById("reactorSlots");
+    const btnSynth = document.getElementById("btnSynthesize");
+    const btnClear = document.getElementById("btnClear");
+    const resultPanel = document.getElementById("resultPanel");
+    const resultFormula = document.getElementById("resultFormula");
+    const resultName = document.getElementById("resultName");
+    const resultMeta = document.getElementById("resultMeta");
+    const resultDesc = document.getElementById("resultDesc");
+    const resultEdu = document.getElementById("resultEdu");
+    const resultNew = document.getElementById("resultNew");
+    const searchInput = document.getElementById("searchInput");
+    const toast = document.getElementById("toast");
+    const progressBadge = document.getElementById("progressBadge");
+
+    function updateProgress() {
+      progressBadge.textContent = `${discoveries.length} / ${TOTAL_KNOWN}+`;
+    }
+
+    function makeKey(symbols) {
+      return [...symbols].sort().join("+");
+    }
+
+    function renderElements(filter = "") {
+      const q = filter.toLowerCase().trim();
+      grid.innerHTML = "";
+      ELEMENTS.forEach(el => {
+        if (q && !el.s.toLowerCase().includes(q) && !el.n.toLowerCase().includes(q) && !String(el.z).includes(q)) return;
+        const div = document.createElement("div");
+        div.className = `el ${el.c}`;
+        div.innerHTML = `<span class="num">${el.z}</span><span class="sym">${el.s}</span><span class="name">${el.n}</span>`;
+        div.addEventListener("click", () => addToReactor(el));
+        let t;
+        div.addEventListener("touchstart", () => { t = setTimeout(() => showElementInfo(el), 450); }, {passive:true});
+        div.addEventListener("touchend", () => clearTimeout(t));
+        div.addEventListener("touchmove", () => clearTimeout(t));
+        div.addEventListener("contextmenu", e => { e.preventDefault(); showElementInfo(el); });
+        grid.appendChild(div);
+      });
+    }
+
+    function addToReactor(el) {
+      if (reactor.length >= 4) { showToast("Максимум 4 компонента"); return; }
+      // normalize: element or compound
+      const item = el.kind === "compound" ? el : {
+        kind: "element", s: el.s, z: el.z, n: el.n, c: el.c, id: el.s
+      };
+      reactor.push(item);
+      renderSlots();
+      updateSynthBtn();
+      hideResult();
+    }
+
+    function addCompoundToReactor(formula, sci, common) {
+      if (reactor.length >= 4) { showToast("Максимум 4 компонента"); return; }
+      reactor.push({
+        kind: "compound",
+        s: formula,
+        id: formula,
+        n: sci || formula,
+        common: common || sci || formula,
+        z: "",
+        c: "compound"
+      });
+      renderSlots();
+      updateSynthBtn();
+      hideResult();
+      showToast(formula + " в реакторе");
+    }
+
+    function removeFromReactor(i) {
+      reactor.splice(i, 1);
+      renderSlots();
+      updateSynthBtn();
+      hideResult();
+    }
+
+    function renderSlots() {
+      slotsEl.innerHTML = "";
+      if (!reactor.length) {
+        slotsEl.innerHTML = `<div style="color:var(--muted);font-size:.78rem;padding:8px">Элементы или открытия → в реактор</div>`;
+        return;
+      }
+      reactor.forEach((el, i) => {
+        if (i > 0) {
+          const p = document.createElement("span");
+          p.className = "plus-sign"; p.textContent = "+";
+          slotsEl.appendChild(p);
+        }
+        const slot = document.createElement("div");
+        slot.className = "slot filled";
+        const label = el.kind === "compound" ? el.s : el.s;
+        const sub = el.kind === "compound" ? "соед." : (el.z || "");
+        slot.innerHTML = `<span class="sym" style="font-size:${label.length>4?'0.7rem':'1rem'}">${label}</span><span class="num">${sub}</span><button class="remove" data-i="${i}">×</button>`;
+        slot.querySelector(".remove").onclick = e => { e.stopPropagation(); removeFromReactor(i); };
+        slotsEl.appendChild(slot);
+      });
+    }
+
+    function updateSynthBtn() { btnSynth.disabled = reactor.length < 2; }
+    function hideResult() { resultPanel.classList.remove("visible"); }
+
+    function findReaction(symbols) {
+      const key = makeKey(symbols);
+      if (REACTIONS[key]) return REACTIONS[key];
+
+      const unique = [...new Set(symbols)].sort();
+      const ukey = unique.join("+");
+      if (REACTIONS[ukey]) return REACTIONS[ukey];
+
+      // try unsorted join for compound formulas already sorted oddly
+      const joined = symbols.slice().sort().join("+");
+      if (REACTIONS[joined]) return REACTIONS[joined];
+
+      const hCount = symbols.filter(s => s === "H").length;
+      const hasO = symbols.includes("O");
+      if (hCount >= 2 && hasO && symbols.length <= 3 && unique.length <= 2) return REACTIONS["H+O"];
+
+      return null;
+    }
+
+    function reactorKeys() {
+      return reactor.map(x => x.kind === "compound" ? x.s : x.s);
+    }
+
+    function synthesize() {
+      if (reactor.length < 2) return;
+      const symbols = reactorKeys();
+      let result = findReaction(symbols);
+
+      const noble = new Set(["He","Ne","Ar","Kr","Xe","Rn","Og"]);
+      const hasNoble = symbols.some(s => noble.has(s));
+      const onlyNoble = symbols.every(s => noble.has(s));
+
+      if (!result) {
+        if (onlyNoble || (hasNoble && !symbols.some(s => ["Xe","Kr","Rn"].includes(s) && (symbols.includes("F") || symbols.includes("O"))))) {
+          result = {
+            formula: "—", name: "Реакция не идёт", type: "Нет реакции", bond: "—",
+            desc: "Благородные газы имеют завершённую электронную оболочку.",
+            edu: "He, Ne, Ar практически не образуют соединений. Xe, Kr и Rn могут реагировать с F₂ и O₂ при особых условиях (XeF₂, XeF₄, XeO₃)."
+          };
+        } else {
+          const cats = reactor.map(e => e.c);
+          const hasMetal = cats.some(c => ["alkali","alkaline","transition","post-transition","lanthanide","actinide"].includes(c));
+          const hasNon = cats.some(c => ["nonmetal","halogen","metalloid"].includes(c));
+          if (hasMetal && hasNon) {
+            result = {
+              formula: symbols.join("") + "ₓ",
+              name: "Возможное бинарное соединение",
+              type: "Синтез (предположительно)",
+              bond: "Ионная или ковалентная",
+              desc: "Металл + неметалл часто образуют соль, оксид, сульфид или галогенид.",
+              edu: "Правило: металл отдаёт электроны (восстановитель), неметалл принимает (окислитель). Точная формула зависит от валентностей и условий."
+            };
+          } else if (!hasMetal) {
+            result = {
+              formula: symbols.join(""),
+              name: "Возможная молекула неметаллов",
+              type: "Синтез (ковалентный)",
+              bond: "Ковалентная",
+              desc: "Неметаллы образуют молекулы с общими электронными парами.",
+              edu: "Примеры: O₂, N₂, Cl₂, P₄, S₈, CO₂, SO₂, NH₃. Нужны подходящие условия (температура, катализатор, давление)."
+            };
+          } else {
+            result = {
+              formula: "?",
+              name: "Реакция не обнаружена",
+              type: "—",
+              bond: "—",
+              desc: "В базе нет устойчивого соединения для этой комбинации при обычных условиях.",
+              edu: "Попробуйте: металл + галоген / кислород / сера; H + O / N / Cl; C + O. Смотрите раздел «Уроки»."
+            };
+          }
+        }
+      }
+
+      // Display rich names
+      const sci = result.sci || result.name || result.formula;
+      const common = result.common || result.name || "";
+      resultFormula.textContent = result.formula;
+      resultName.innerHTML = `<div><strong>Научное:</strong> ${sci}</div>` +
+        (common && common !== sci ? `<div style="margin-top:2px"><strong>Обычное:</strong> ${common}</div>` : "");
+      resultMeta.innerHTML = `
+        <span class="tag type">${result.type || "Синтез"}</span>
+        <span class="tag bond">${result.bond || "—"}</span>
+        <button class="tag" id="btnUseProduct" style="cursor:pointer;border:1px solid var(--accent)">＋ в реактор</button>
+      `;
+      resultDesc.textContent = result.desc || "";
+      resultEdu.textContent = result.edu || "";
+      resultPanel.classList.add("visible");
+      const useBtn = document.getElementById("btnUseProduct");
+      if (useBtn && result.formula && result.formula !== "—" && result.formula !== "?") {
+        useBtn.onclick = () => addCompoundToReactor(result.formula, sci, common);
+      }
+
+      const isReal = result.formula !== "—" && result.formula !== "?" && !String(result.formula).includes("ₓ");
+      const isNew = isReal && !discoveries.some(d => d.formula === result.formula);
+      if (isNew) {
+        discoveries.unshift({
+          formula: result.formula, name: sci, sci, common,
+          type: result.type, bond: result.bond, desc: result.desc, edu: result.edu,
+          elements: symbols.join(" + "),
+          date: new Date().toLocaleString("ru-RU")
+        });
+        localStorage.setItem("chemfusion_v2", JSON.stringify(discoveries));
+        resultNew.style.display = "inline-block";
+        showToast("★ Новое открытие! Можно смешивать дальше");
+        updateProgress();
+      } else {
+        resultNew.style.display = "none";
+      }
+      if (navigator.vibrate) navigator.vibrate(25);
+    }
+
+    function showToast(msg) {
+      toast.textContent = msg;
+      toast.classList.add("show");
+      setTimeout(() => toast.classList.remove("show"), 2400);
+    }
+
+    function showElementInfo(el) {
+      const catNames = {
+        nonmetal:"Неметалл", "noble-gas":"Благородный газ", alkali:"Щелочной металл",
+        alkaline:"Щёлочноземельный", transition:"Переходный металл", "post-transition":"Постпереходный",
+        metalloid:"Металлоид", halogen:"Галоген", lanthanide:"Лантаноид", actinide:"Актиноид", unknown:"Неизвестно"
+      };
+      document.getElementById("elDetail").innerHTML = `
+        <div class="big-sym" style="color:var(--accent)">${el.s}</div>
+        <div class="big-name">${el.n}</div>
+        <div class="props">
+          <div class="prop"><div class="prop-label">Атомный номер</div><div class="prop-value">${el.z}</div></div>
+          <div class="prop"><div class="prop-label">Категория</div><div class="prop-value">${catNames[el.c]||el.c}</div></div>
+          <div class="prop"><div class="prop-label">Типичная валентность</div><div class="prop-value">${el.val || "—"}</div></div>
+          <div class="prop"><div class="prop-label">Символ</div><div class="prop-value">${el.s}</div></div>
+        </div>
+        <p style="margin-top:12px;font-size:.78rem;color:var(--accent3);text-align:left;line-height:1.4">${el.edu||""}</p>
+        <p style="margin-top:8px;font-size:.72rem;color:var(--muted)">Нажмите элемент, чтобы добавить в реактор</p>
+      `;
+      document.getElementById("infoModal").classList.add("open");
+    }
+
+    function renderJournal() {
+      const list = document.getElementById("journalList");
+      document.getElementById("journalStats").innerHTML = `
+        <div class="stat-box"><div class="num">${discoveries.length}</div><div class="lbl">Открыто</div></div>
+        <div class="stat-box"><div class="num">${TOTAL_KNOWN}+</div><div class="lbl">В базе</div></div>
+        <div class="stat-box"><div class="num">${Math.min(100, Math.round(discoveries.length / Math.max(TOTAL_KNOWN,1) * 100))}%</div><div class="lbl">Прогресс</div></div>
+      `;
+      if (!discoveries.length) {
+        list.innerHTML = `<div class="empty-journal">Пока пусто.<br>Синтезируйте H₂O, NaCl, CO₂…</div>`;
+        return;
+      }
+      list.innerHTML = discoveries.map((d, idx) => `
+        <div class="journal-item" data-idx="${idx}" style="cursor:pointer">
+          <div class="formula">${d.formula}</div>
+          <div class="name">Научн.: ${d.sci || d.name || ""}</div>
+          <div class="name" style="color:var(--accent3)">Обычн.: ${d.common || d.name || "—"}</div>
+          <div class="meta">${d.elements || ""} · ${d.type || ""} · ${d.date || ""}</div>
+          <div class="meta" style="color:var(--accent)">Нажми → добавить в реактор</div>
+        </div>
+      `).join("");
+      list.querySelectorAll(".journal-item").forEach(node => {
+        node.onclick = () => {
+          const d = discoveries[+node.dataset.idx];
+          if (!d) return;
+          addCompoundToReactor(d.formula, d.sci || d.name, d.common || d.name);
+          document.getElementById("journalModal").classList.remove("open");
+          switchView("reactor");
+        };
+      });
+    }
+
+    function renderLessons() {
+      document.getElementById("lessonsContent").innerHTML = `
+        <div class="lesson-card">
+          <h3>1. Типы реакций синтеза</h3>
+          <p>A + B → AB. Два или более простых вещества образуют сложное. Примеры: 2H₂ + O₂ → 2H₂O, 2Na + Cl₂ → 2NaCl, C + O₂ → CO₂.</p>
+        </div>
+        <div class="lesson-card">
+          <h3>2. Ионная vs ковалентная связь</h3>
+          <p><strong>Ионная</strong> — металл + неметалл (NaCl, CaO, MgCl₂). Электроны переходят от металла к неметаллу.<br>
+          <strong>Ковалентная</strong> — неметалл + неметалл (H₂O, CO₂, NH₃, Cl₂). Электроны обобществляются.</p>
+        </div>
+        <div class="lesson-card">
+          <h3>3. Категории элементов</h3>
+          <p>• <strong>Щелочные</strong> (Li–Cs) — очень активны, +1.<br>
+          • <strong>Щёлочноземельные</strong> (Be–Ba) — +2.<br>
+          • <strong>Галогены</strong> (F–I) — самые активные неметаллы, −1.<br>
+          • <strong>Благородные газы</strong> — почти не реагируют.<br>
+          • <strong>Переходные металлы</strong> — переменные валентности, катализ, цветные соединения.</p>
+        </div>
+        <div class="lesson-card">
+          <h3>4. Что с чем реагирует</h3>
+          <p>• Металл + O₂ → оксид<br>
+          • Металл + галоген → галогенид (соль)<br>
+          • Металл + S → сульфид<br>
+          • H₂ + O₂ → вода<br>
+          • H₂ + N₂ → аммиак (катализ, давление)<br>
+          • Неметалл + O₂ → кислотный оксид (CO₂, SO₂, P₄O₁₀)</p>
+        </div>
+        <div class="lesson-card">
+          <h3>5. Важные промышленные реакции</h3>
+          <p>• Габера-Боша: N₂ + 3H₂ → 2NH₃ (удобрения)<br>
+          • Контактный метод: 2SO₂ + O₂ → 2SO₃ → H₂SO₄<br>
+          • Горение углеводородов → CO₂ + H₂O + энергия<br>
+          • Получение извести: CaCO₃ → CaO + CO₂</p>
+        </div>
+        <div class="lesson-card">
+          <h3>6. Советы по игре</h3>
+          <p>Начните с H+O, Na+Cl, C+O, Fe+O, Ca+O, H+N, Mg+O, Al+Cl, S+O, P+O. Потом добавляйте третий элемент (H+S+O → серная кислота). Следите за типом связи и обучающими заметками.</p>
+        </div>
+      `;
+    }
+
+    // Events
+    btnSynth.onclick = synthesize;
+    btnClear.onclick = () => { reactor = []; renderSlots(); updateSynthBtn(); hideResult(); };
+    searchInput.oninput = () => renderElements(searchInput.value);
+
+    document.getElementById("btnJournal").onclick = () => { renderJournal(); document.getElementById("journalModal").classList.add("open"); };
+    document.getElementById("closeJournal").onclick = () => document.getElementById("journalModal").classList.remove("open");
+    document.getElementById("btnLessons").onclick = () => { renderLessons(); document.getElementById("lessonsModal").classList.add("open"); };
+    document.getElementById("closeLessons").onclick = () => document.getElementById("lessonsModal").classList.remove("open");
+    document.getElementById("btnHelp").onclick = () => document.getElementById("helpModal").classList.add("open");
+    document.getElementById("closeHelp").onclick = () => document.getElementById("helpModal").classList.remove("open");
+    document.getElementById("closeInfo").onclick = () => document.getElementById("infoModal").classList.remove("open");
+
+    ["journalModal","lessonsModal","helpModal","infoModal"].forEach(id => {
+      document.getElementById(id).onclick = e => { if (e.target.id === id) e.target.classList.remove("open"); };
+    });
+
+
+    // ========== QUIZ (Olympiad prep) ==========
+    const QUIZ = [
+      {q:"Какая формула у воды?", opts:["H₂O","HO₂","H₂O₂","OH"], ans:0, exp:"Вода — H₂O. Пероксид водорода — H₂O₂."},
+      {q:"Поваренная соль — это?", opts:["KCl","NaCl","Na₂CO₃","CaCl₂"], ans:1, exp:"NaCl — хлорид натрия."},
+      {q:"Какой газ образуется при реакции CaC₂ с водой?", opts:["CO₂","CH₄","C₂H₂","H₂"], ans:2, exp:"CaC₂ + 2H₂O → C₂H₂ + Ca(OH)₂ (ацетилен)."},
+      {q:"Благородный газ, образующий соединения с F?", opts:["He","Ne","Ar","Xe"], ans:3, exp:"Ксенон образует XeF₂, XeF₄, XeO₃."},
+      {q:"Оксид, из которого получают известь?", opts:["CaO","MgO","Na₂O","Al₂O₃"], ans:0, exp:"CaCO₃ → CaO + CO₂ (обжиг известняка)."},
+      {q:"Тип связи в NaCl?", opts:["Ковалентная","Ионная","Металлическая","Водородная"], ans:1, exp:"Металл + неметалл → ионная связь."},
+      {q:"Процесс получения аммиака называется?", opts:["Контактный","Габера-Боша","Сольве","Клаус"], ans:1, exp:"N₂ + 3H₂ → 2NH₃ (Габер-Бош)."},
+      {q:"Формула серной кислоты?", opts:["H₂SO₃","H₂SO₄","HNO₃","H₃PO₄"], ans:1, exp:"H₂SO₄ — серная, H₂SO₃ — сернистая."},
+      {q:"Какой элемент — основа органической химии?", opts:["H","O","C","N"], ans:2, exp:"Углерод образует длинные цепи и кольца."},
+      {q:"Fe₂O₃ — это?", opts:["Магнетит","Гематит (ржавчина)","Сидерit","Пирит"], ans:1, exp:"Fe₂O₃ — гематит / ржавчина. Fe₃O₄ — магнетит."},
+      {q:"Самый активный неметалл?", opts:["Cl","O","F","N"], ans:2, exp:"Фтор — самый электроотрицательный и активный."},
+      {q:"NH₃ — тип молекулы?", opts:["Линейная","Плоская","Пирамидальная","Тетраэдр"], ans:2, exp:"Аммиак — тригональная пирамида."},
+      {q:"Какой оксид кислотный?", opts:["Na₂O","CaO","CO₂","MgO"], ans:2, exp:"CO₂ + H₂O → H₂CO₃. Основные оксиды — металлы."},
+      {q:"Символ элемента с Z=26?", opts:["Cu","Fe","Ni","Zn"], ans:1, exp:"Железо — 26 протонов."},
+      {q:"Что такое амфотерный оксид?", opts:["Только основной","Только кислотный","И основной, и кислотный","Нейтральный"], ans:2, exp:"Al₂O₃, ZnO, BeO реагируют и с кислотами, и со щелочами."},
+      {q:"Газ с запахом тухлых яиц?", opts:["NH₃","SO₂","H₂S","NO₂"], ans:2, exp:"Сероводород H₂S."},
+      {q:"Главная руда свинца?", opts:["Гематит","Галенит PbS","Боксит","Халькопирит"], ans:1, exp:"Галенит — PbS."},
+      {q:"UF₆ используют для?", opts:["Удобрений","Обогащения урана","Стекла","Катализа"], ans:1, exp:"Гексафторид урана — газодиффузия / центрифуги."},
+      {q:"Сколько элементов в таблице Менделеева?", opts:["100","110","118","120"], ans:2, exp:"На 2026 год официально 118 элементов."},
+      {q:"Реакция 2H₂ + O₂ → 2H₂O — это?", opts:["Разложение","Обмен","Синтез / соединение","Замещение"], ans:2, exp:"Из простых веществ — сложное: синтез."}
+    ];
+
+    let quizIdx = 0, quizScore = 0, quizAnswered = false;
+
+    function startQuiz() {
+      quizIdx = 0; quizScore = 0; quizAnswered = false;
+      // shuffle
+      for (let i = QUIZ.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [QUIZ[i], QUIZ[j]] = [QUIZ[j], QUIZ[i]];
+      }
+      showQuizQ();
+      document.getElementById("quizModal").classList.add("open");
+    }
+
+    function showQuizQ() {
+      const body = document.getElementById("quizBody");
+      if (quizIdx >= Math.min(10, QUIZ.length)) {
+        body.innerHTML = `
+          <div class="quiz-score">Результат: ${quizScore} / ${quizIdx}</div>
+          <p style="text-align:center;color:var(--muted);font-size:.85rem;margin-bottom:14px">
+            ${quizScore >= 8 ? "Отлично! Уровень олимпиады 🔥" : quizScore >= 5 ? "Хороший результат. Повтори уроки." : "Стоит ещё потренироваться в реакторе и уроках."}
+          </p>
+          <button class="btn btn-primary" style="width:100%" onclick="startQuiz()">Ещё раз</button>
+        `;
+        // achievement
+        if (quizScore >= 8) unlockAch("quiz_master");
+        return;
+      }
+      const q = QUIZ[quizIdx];
+      quizAnswered = false;
+      body.innerHTML = `
+        <div style="font-size:.7rem;color:var(--muted);margin-bottom:8px">Вопрос ${quizIdx+1} из 10 · Счёт: ${quizScore}</div>
+        <div class="quiz-q">${q.q}</div>
+        ${q.opts.map((o,i) => `<button class="quiz-opt" data-i="${i}">${o}</button>`).join("")}
+        <div id="quizExp" style="display:none;margin-top:10px;font-size:.78rem;color:var(--accent3);line-height:1.4"></div>
+        <button class="btn btn-secondary" id="quizNext" style="width:100%;margin-top:12px;display:none">Далее →</button>
+      `;
+      body.querySelectorAll(".quiz-opt").forEach(btn => {
+        btn.onclick = () => {
+          if (quizAnswered) return;
+          quizAnswered = true;
+          const i = +btn.dataset.i;
+          body.querySelectorAll(".quiz-opt").forEach((b,j) => {
+            if (j === q.ans) b.classList.add("correct");
+            else if (j === i) b.classList.add("wrong");
+          });
+          if (i === q.ans) quizScore++;
+          document.getElementById("quizExp").style.display = "block";
+          document.getElementById("quizExp").textContent = q.exp;
+          document.getElementById("quizNext").style.display = "block";
+        };
+      });
+      document.getElementById("quizNext").onclick = () => { quizIdx++; showQuizQ(); };
+    }
+
+    // ========== ACHIEVEMENTS ==========
+    let ach = JSON.parse(localStorage.getItem("himolimp_ach") || "{}");
+    const ACH_DEF = {
+      first: {ico:"🧪", name:"Первый синтез"},
+      water: {ico:"💧", name:"Вода жизни"},
+      salt: {ico:"🧂", name:"Соль земли"},
+      ten: {ico:"📚", name:"10 открытий"},
+      fifty: {ico:"🏅", name:"50 открытий"},
+      quiz_master: {ico:"🏆", name:"Мастер квиза"},
+      noble: {ico:"👑", name:"Повелитель инертных"}
+    };
+    function unlockAch(id) {
+      if (ach[id]) return;
+      ach[id] = true;
+      localStorage.setItem("himolimp_ach", JSON.stringify(ach));
+      showToast(`🏅 Достижение: ${ACH_DEF[id]?.name || id}`);
+    }
+
+    // Hook into synthesize for achievements — patch after discoveries
+    const _origSynth = synthesize;
+    // We'll call unlocks inside existing flow via Mutation: override updateProgress related
+
+    // ========== PWA INSTALL ==========
+    let deferredPrompt = null;
+    window.addEventListener("beforeinstallprompt", (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      document.getElementById("btnInstall").style.display = "grid";
+      document.getElementById("installBanner").classList.add("show");
+    });
+
+    async function doInstall() {
+      if (!deferredPrompt) {
+        showToast("В Chrome: меню ⋮ → «Установить приложение»");
+        return;
+      }
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === "accepted") {
+        document.getElementById("installBanner").classList.remove("show");
+        document.getElementById("btnInstall").style.display = "none";
+        showToast("Приложение установлено!");
+      }
+      deferredPrompt = null;
+    }
+
+    document.getElementById("btnInstall").onclick = doInstall;
+    document.getElementById("btnInstallBanner").onclick = doInstall;
+
+    window.addEventListener("appinstalled", () => {
+      document.getElementById("installBanner").classList.remove("show");
+      document.getElementById("btnInstall").style.display = "none";
+    });
+
+    // Service Worker
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("./sw.js").catch(() => {});
+    }
+
+    // Quiz button
+    document.getElementById("btnQuiz").onclick = startQuiz;
+    document.getElementById("closeQuiz").onclick = () => document.getElementById("quizModal").classList.remove("open");
+    document.getElementById("quizModal").onclick = e => { if (e.target.id === "quizModal") e.target.classList.remove("open"); };
+
+    // Enhance journal with achievements
+    const _renderJournal = renderJournal;
+    renderJournal = function() {
+      _renderJournal();
+      const stats = document.getElementById("journalStats");
+      if (!stats) return;
+      const achHtml = Object.entries(ACH_DEF).map(([id, a]) =>
+        `<div class="ach ${ach[id]?"done":""}"><div class="ico">${a.ico}</div>${a.name}</div>`
+      ).join("");
+      const list = document.getElementById("journalList");
+      list.insertAdjacentHTML("afterbegin", `<div class="ach-grid">${achHtml}</div><div style="height:8px"></div>`);
+    };
+
+    // Achievement hooks on discovery
+    const _updateProgress = updateProgress;
+    updateProgress = function() {
+      _updateProgress();
+      if (discoveries.length >= 1) unlockAch("first");
+      if (discoveries.length >= 10) unlockAch("ten");
+      if (discoveries.length >= 50) unlockAch("fifty");
+      if (discoveries.some(d => d.formula === "H₂O")) unlockAch("water");
+      if (discoveries.some(d => d.formula === "NaCl")) unlockAch("salt");
+      if (discoveries.some(d => d.formula && d.formula.includes("Xe"))) unlockAch("noble");
+    };
+
+
+    // ========== ENCYCLOPEDIA + APPEARANCE ==========
+    const APPEAR = {"1": {"phase": "gas", "look": "Бесцветный невидимый газ", "real": "В обычной жизни его не видно. Это самый лёгкий газ: шарики с водородом взлетают (опасно — горюч). Жидкий водород прозрачен и очень холоден (−253 °C).", "color": "#ffffff"}, "2": {"phase": "gas", "look": "Бесцветный газ", "real": "Невидим. Наполняет праздничные шары (не горит, в отличие от водорода). В голосе после гелия становится писклявым.", "color": "#d9ffff"}, "3": {"phase": "solid", "look": "Мягкий серебристый металл", "real": "Режется ножом, блестит как свежий свинец, на воздухе за минуты темнеет. Кусочек хранят в масле, иначе окислится.", "color": "#cc80ff"}, "4": {"phase": "solid", "look": "Серебристо-серый металл", "real": "Металлический блеск, сравнительно лёгкий. На воздухе тускнеет.", "color": "#c2ff00"}, "5": {"phase": "solid", "look": "Серый полуметалл", "real": "Внешне часто как тёмный металл, но хрупкий. Проводит ток хуже металлов.", "color": "#ffb5b5"}, "6": {"phase": "solid", "look": "Чёрный графит или прозрачный алмаз", "real": "Карандашный грифель — графит (скользкий, чёрный). Алмаз в кольце — тот же элемент, но другая кристаллическая решётка.", "color": "#909090"}, "7": {"phase": "gas", "look": "Невидимый газ (78% воздуха)", "real": "Вы постоянно им дышите. Жидкий азот — бурлящая прозрачная «вода», от которой идёт туман (конденсат воздуха).", "color": "#3050f8"}, "8": {"phase": "gas", "look": "Невидимый газ", "real": "Не виден, но без него нет огня и дыхания. Жидкий кислород — нежно-голубая жидкость.", "color": "#ff0d0d"}, "9": {"phase": "gas", "look": "Бледно-жёлтый едкий газ", "real": "Слабый желтоватый оттенок, очень агрессивен. В чистом виде в быту не встречается.", "color": "#90e050"}, "10": {"phase": "gas", "look": "Бесцветный инертный газ", "real": "Невидим и почти не с чем не реагирует. В лампах и рекламных трубках даёт цветное свечение.", "color": "#b3e3f5"}, "11": {"phase": "solid", "look": "Мягкий блестящий металл", "real": "Как твёрдый сыр по мягкости, серебристый срез, на воздухе белеет/тускнеет за секунды. В воде шипит и плавает.", "color": "#ab5cf2"}, "12": {"phase": "solid", "look": "Серебристо-серый металл", "real": "Металлический блеск, сравнительно лёгкий. На воздухе тускнеет.", "color": "#8aff00"}, "13": {"phase": "solid", "look": "Металл или хрупкое вещество", "real": "От мягких блестящих (свинец, олово) до более хрупких серых форм.", "color": "#bfa6a6"}, "14": {"phase": "solid", "look": "Серый полуметалл", "real": "Внешне часто как тёмный металл, но хрупкий. Проводит ток хуже металлов.", "color": "#f0c8a0"}, "15": {"phase": "solid", "look": "Белый восковой или красный порошок", "real": "Белый фосфор мягкий, ядовит, светится зелёным в темноте. Красный — безопаснее, тёмно-красный порошок на спичках.", "color": "#ff8000"}, "16": {"phase": "solid", "look": "Ярко-жёлтые кристаллы", "real": "Лимонно-жёлтый порошок или хрупкие кристаллы — так сера выглядит у вулканов и в лаборатории.", "color": "#ffff30"}, "17": {"phase": "gas", "look": "Жёлто-зелёный тяжёлый газ", "real": "Цвет как у разбавленной зелёнки или «хлорной» воды. Резкий запах бассейна/отбеливателя.", "color": "#1ff01f"}, "18": {"phase": "gas", "look": "Бесцветный инертный газ", "real": "Невидим и почти не с чем не реагирует. В лампах и рекламных трубках даёт цветное свечение.", "color": "#80d1e3"}, "19": {"phase": "solid", "look": "Мягкий серебристый металл", "real": "Мягкий, блестящий на срезе, на воздухе быстро покрывается плёнкой. С водой реагирует бурно.", "color": "#8f40d4"}, "20": {"phase": "solid", "look": "Серебристо-серый металл", "real": "Металлический блеск, сравнительно лёгкий. На воздухе тускнеет.", "color": "#3dff00"}, "21": {"phase": "solid", "look": "Металл с характерным блеском", "real": "Большинство — серые твёрдые металлы. Исключения по цвету: медь, золото.", "color": "#88aacc"}, "22": {"phase": "solid", "look": "Металл с характерным блеском", "real": "Большинство — серые твёрдые металлы. Исключения по цвету: медь, золото.", "color": "#88aacc"}, "23": {"phase": "solid", "look": "Металл с характерным блеском", "real": "Большинство — серые твёрдые металлы. Исключения по цвету: медь, золото.", "color": "#88aacc"}, "24": {"phase": "solid", "look": "Металл с характерным блеском", "real": "Большинство — серые твёрдые металлы. Исключения по цвету: медь, золото.", "color": "#88aacc"}, "25": {"phase": "solid", "look": "Металл с характерным блеском", "real": "Большинство — серые твёрдые металлы. Исключения по цвету: медь, золото.", "color": "#88aacc"}, "26": {"phase": "solid", "look": "Серый магнитный металл", "real": "Обычное железо и сталь. Ржавчина — рыжая рыхлая корка. Чистый металл — серебристо-серый.", "color": "#e06633"}, "27": {"phase": "solid", "look": "Металл с характерным блеском", "real": "Большинство — серые твёрдые металлы. Исключения по цвету: медь, золото.", "color": "#88aacc"}, "28": {"phase": "solid", "look": "Металл с характерным блеском", "real": "Большинство — серые твёрдые металлы. Исключения по цвету: медь, золото.", "color": "#88aacc"}, "29": {"phase": "solid", "look": "Красновато-золотистый металл", "real": "Узнаваемый цвет медной трубы и монет: розово-красный блеск. Со временем зеленеет (патина).", "color": "#c88033"}, "30": {"phase": "solid", "look": "Металл с характерным блеском", "real": "Большинство — серые твёрдые металлы. Исключения по цвету: медь, золото.", "color": "#88aacc"}, "31": {"phase": "solid", "look": "Металл или хрупкое вещество", "real": "От мягких блестящих (свинец, олово) до более хрупких серых форм.", "color": "#88aacc"}, "32": {"phase": "solid", "look": "Серый полуметалл", "real": "Внешне часто как тёмный металл, но хрупкий. Проводит ток хуже металлов.", "color": "#88aacc"}, "33": {"phase": "solid", "look": "Серый полуметалл", "real": "Внешне часто как тёмный металл, но хрупкий. Проводит ток хуже металлов.", "color": "#88aacc"}, "34": {"phase": "solid", "look": "Неметалл", "real": "Внешний вид сильно различается: газы, жёлтая сера, чёрный углерод, цветные кристаллы.", "color": "#88aacc"}, "35": {"phase": "liquid", "look": "Красно-бурая дымящая жидкость", "real": "Тяжёлая жидкость цвета крепкого чая/крови, над ней красно-бурые ядовитые пары. Единственный жидкий неметалл.", "color": "#a62929"}, "36": {"phase": "gas", "look": "Бесцветный инертный газ", "real": "Невидим и почти не с чем не реагирует. В лампах и рекламных трубках даёт цветное свечение.", "color": "#88aacc"}, "37": {"phase": "solid", "look": "Мягкий серебристый металл", "real": "Мягкий, блестящий на срезе, на воздухе быстро покрывается плёнкой. С водой реагирует бурно.", "color": "#88aacc"}, "38": {"phase": "solid", "look": "Серебристо-серый металл", "real": "Металлический блеск, сравнительно лёгкий. На воздухе тускнеет.", "color": "#88aacc"}, "39": {"phase": "solid", "look": "Металл с характерным блеском", "real": "Большинство — серые твёрдые металлы. Исключения по цвету: медь, золото.", "color": "#88aacc"}, "40": {"phase": "solid", "look": "Металл с характерным блеском", "real": "Большинство — серые твёрдые металлы. Исключения по цвету: медь, золото.", "color": "#88aacc"}, "41": {"phase": "solid", "look": "Металл с характерным блеском", "real": "Большинство — серые твёрдые металлы. Исключения по цвету: медь, золото.", "color": "#88aacc"}, "42": {"phase": "solid", "look": "Металл с характерным блеском", "real": "Большинство — серые твёрдые металлы. Исключения по цвету: медь, золото.", "color": "#88aacc"}, "43": {"phase": "solid", "look": "Металл с характерным блеском", "real": "Большинство — серые твёрдые металлы. Исключения по цвету: медь, золото.", "color": "#88aacc"}, "44": {"phase": "solid", "look": "Металл с характерным блеском", "real": "Большинство — серые твёрдые металлы. Исключения по цвету: медь, золото.", "color": "#88aacc"}, "45": {"phase": "solid", "look": "Металл с характерным блеском", "real": "Большинство — серые твёрдые металлы. Исключения по цвету: медь, золото.", "color": "#88aacc"}, "46": {"phase": "solid", "look": "Металл с характерным блеском", "real": "Большинство — серые твёрдые металлы. Исключения по цвету: медь, золото.", "color": "#88aacc"}, "47": {"phase": "solid", "look": "Ослепительно белый блеск", "real": "Самый «белый» металл в быту: ложки, украшения. Со временем чернеет от серы в воздухе.", "color": "#c0c0c0"}, "48": {"phase": "solid", "look": "Металл с характерным блеском", "real": "Большинство — серые твёрдые металлы. Исключения по цвету: медь, золото.", "color": "#88aacc"}, "49": {"phase": "solid", "look": "Металл или хрупкое вещество", "real": "От мягких блестящих (свинец, олово) до более хрупких серых форм.", "color": "#88aacc"}, "50": {"phase": "solid", "look": "Металл или хрупкое вещество", "real": "От мягких блестящих (свинец, олово) до более хрупких серых форм.", "color": "#88aacc"}, "51": {"phase": "solid", "look": "Серый полуметалл", "real": "Внешне часто как тёмный металл, но хрупкий. Проводит ток хуже металлов.", "color": "#88aacc"}, "52": {"phase": "solid", "look": "Серый полуметалл", "real": "Внешне часто как тёмный металл, но хрупкий. Проводит ток хуже металлов.", "color": "#88aacc"}, "53": {"phase": "solid", "look": "Почти чёрные кристаллы с фиолетовым", "real": "Блестящие тёмные пластинки; если нагреть — фиолетовый пар, как в школьном опыте.", "color": "#940094"}, "54": {"phase": "gas", "look": "Бесцветный инертный газ", "real": "Невидим и почти не с чем не реагирует. В лампах и рекламных трубках даёт цветное свечение.", "color": "#88aacc"}, "55": {"phase": "solid", "look": "Мягкий серебристый металл", "real": "Мягкий, блестящий на срезе, на воздухе быстро покрывается плёнкой. С водой реагирует бурно.", "color": "#88aacc"}, "56": {"phase": "solid", "look": "Серебристо-серый металл", "real": "Металлический блеск, сравнительно лёгкий. На воздухе тускнеет.", "color": "#88aacc"}, "57": {"phase": "solid", "look": "Серебристый редкоземельный металл", "real": "Мягкие серебристые металлы, на воздухе окисляются. На вид почти неотличимы друг от друга.", "color": "#88aacc"}, "58": {"phase": "solid", "look": "Серебристый редкоземельный металл", "real": "Мягкие серебристые металлы, на воздухе окисляются. На вид почти неотличимы друг от друга.", "color": "#88aacc"}, "59": {"phase": "solid", "look": "Серебристый редкоземельный металл", "real": "Мягкие серебристые металлы, на воздухе окисляются. На вид почти неотличимы друг от друга.", "color": "#88aacc"}, "60": {"phase": "solid", "look": "Серебристый редкоземельный металл", "real": "Мягкие серебристые металлы, на воздухе окисляются. На вид почти неотличимы друг от друга.", "color": "#88aacc"}, "61": {"phase": "solid", "look": "Серебристый редкоземельный металл", "real": "Мягкие серебристые металлы, на воздухе окисляются. На вид почти неотличимы друг от друга.", "color": "#88aacc"}, "62": {"phase": "solid", "look": "Серебристый редкоземельный металл", "real": "Мягкие серебристые металлы, на воздухе окисляются. На вид почти неотличимы друг от друга.", "color": "#88aacc"}, "63": {"phase": "solid", "look": "Серебристый редкоземельный металл", "real": "Мягкие серебристые металлы, на воздухе окисляются. На вид почти неотличимы друг от друга.", "color": "#88aacc"}, "64": {"phase": "solid", "look": "Серебристый редкоземельный металл", "real": "Мягкие серебристые металлы, на воздухе окисляются. На вид почти неотличимы друг от друга.", "color": "#88aacc"}, "65": {"phase": "solid", "look": "Серебристый редкоземельный металл", "real": "Мягкие серебристые металлы, на воздухе окисляются. На вид почти неотличимы друг от друга.", "color": "#88aacc"}, "66": {"phase": "solid", "look": "Серебристый редкоземельный металл", "real": "Мягкие серебристые металлы, на воздухе окисляются. На вид почти неотличимы друг от друга.", "color": "#88aacc"}, "67": {"phase": "solid", "look": "Серебристый редкоземельный металл", "real": "Мягкие серебристые металлы, на воздухе окисляются. На вид почти неотличимы друг от друга.", "color": "#88aacc"}, "68": {"phase": "solid", "look": "Серебристый редкоземельный металл", "real": "Мягкие серебристые металлы, на воздухе окисляются. На вид почти неотличимы друг от друга.", "color": "#88aacc"}, "69": {"phase": "solid", "look": "Серебристый редкоземельный металл", "real": "Мягкие серебристые металлы, на воздухе окисляются. На вид почти неотличимы друг от друга.", "color": "#88aacc"}, "70": {"phase": "solid", "look": "Серебристый редкоземельный металл", "real": "Мягкие серебристые металлы, на воздухе окисляются. На вид почти неотличимы друг от друга.", "color": "#88aacc"}, "71": {"phase": "solid", "look": "Серебристый редкоземельный металл", "real": "Мягкие серебристые металлы, на воздухе окисляются. На вид почти неотличимы друг от друга.", "color": "#88aacc"}, "72": {"phase": "solid", "look": "Металл с характерным блеском", "real": "Большинство — серые твёрдые металлы. Исключения по цвету: медь, золото.", "color": "#88aacc"}, "73": {"phase": "solid", "look": "Металл с характерным блеском", "real": "Большинство — серые твёрдые металлы. Исключения по цвету: медь, золото.", "color": "#88aacc"}, "74": {"phase": "solid", "look": "Металл с характерным блеском", "real": "Большинство — серые твёрдые металлы. Исключения по цвету: медь, золото.", "color": "#88aacc"}, "75": {"phase": "solid", "look": "Металл с характерным блеском", "real": "Большинство — серые твёрдые металлы. Исключения по цвету: медь, золото.", "color": "#88aacc"}, "76": {"phase": "solid", "look": "Металл с характерным блеском", "real": "Большинство — серые твёрдые металлы. Исключения по цвету: медь, золото.", "color": "#88aacc"}, "77": {"phase": "solid", "look": "Металл с характерным блеском", "real": "Большинство — серые твёрдые металлы. Исключения по цвету: медь, золото.", "color": "#88aacc"}, "78": {"phase": "solid", "look": "Металл с характерным блеском", "real": "Большинство — серые твёрдые металлы. Исключения по цвету: медь, золото.", "color": "#88aacc"}, "79": {"phase": "solid", "look": "Яркий жёлтый металл", "real": "Классическое «золото»: тёплый жёлтый блеск, не ржавеет, не темнеет.", "color": "#ffd123"}, "80": {"phase": "liquid", "look": "Серебристые подвижные капли", "real": "Как жидкое зеркало: тяжёлые блестящие шарики ртути. Токсична — не трогать.", "color": "#b8b8b8"}, "81": {"phase": "solid", "look": "Металл или хрупкое вещество", "real": "От мягких блестящих (свинец, олово) до более хрупких серых форм.", "color": "#88aacc"}, "82": {"phase": "solid", "look": "Металл или хрупкое вещество", "real": "От мягких блестящих (свинец, олово) до более хрупких серых форм.", "color": "#88aacc"}, "83": {"phase": "solid", "look": "Металл или хрупкое вещество", "real": "От мягких блестящих (свинец, олово) до более хрупких серых форм.", "color": "#88aacc"}, "84": {"phase": "solid", "look": "Металл или хрупкое вещество", "real": "От мягких блестящих (свинец, олово) до более хрупких серых форм.", "color": "#88aacc"}, "85": {"phase": "solid", "look": "Тёмные кристаллы", "real": "Тяжёлые галогены — тёмные блестящие или матовые кристаллы, летучие.", "color": "#88aacc"}, "86": {"phase": "gas", "look": "Бесцветный инертный газ", "real": "Невидим и почти не с чем не реагирует. В лампах и рекламных трубках даёт цветное свечение.", "color": "#88aacc"}, "87": {"phase": "solid", "look": "Мягкий серебристый металл", "real": "Мягкий, блестящий на срезе, на воздухе быстро покрывается плёнкой. С водой реагирует бурно.", "color": "#88aacc"}, "88": {"phase": "solid", "look": "Серебристо-серый металл", "real": "Металлический блеск, сравнительно лёгкий. На воздухе тускнеет.", "color": "#88aacc"}, "89": {"phase": "solid", "look": "Радиоактивный серебристый металл", "real": "Если образец достаточно большой — серый металл. Многие получены в микроскопических количествах.", "color": "#88aacc"}, "90": {"phase": "solid", "look": "Радиоактивный серебристый металл", "real": "Если образец достаточно большой — серый металл. Многие получены в микроскопических количествах.", "color": "#88aacc"}, "91": {"phase": "solid", "look": "Радиоактивный серебристый металл", "real": "Если образец достаточно большой — серый металл. Многие получены в микроскопических количествах.", "color": "#88aacc"}, "92": {"phase": "solid", "look": "Тяжёлый серый металл", "real": "Плотный серебристо-серый. В природе скрыт в чёрной смоляной руде. Радиоактивен.", "color": "#008fff"}, "93": {"phase": "solid", "look": "Радиоактивный серебристый металл", "real": "Если образец достаточно большой — серый металл. Многие получены в микроскопических количествах.", "color": "#88aacc"}, "94": {"phase": "solid", "look": "Радиоактивный серебристый металл", "real": "Если образец достаточно большой — серый металл. Многие получены в микроскопических количествах.", "color": "#88aacc"}, "95": {"phase": "solid", "look": "Радиоактивный серебристый металл", "real": "Если образец достаточно большой — серый металл. Многие получены в микроскопических количествах.", "color": "#88aacc"}, "96": {"phase": "solid", "look": "Радиоактивный серебристый металл", "real": "Если образец достаточно большой — серый металл. Многие получены в микроскопических количествах.", "color": "#88aacc"}, "97": {"phase": "solid", "look": "Радиоактивный серебристый металл", "real": "Если образец достаточно большой — серый металл. Многие получены в микроскопических количествах.", "color": "#88aacc"}, "98": {"phase": "solid", "look": "Радиоактивный серебристый металл", "real": "Если образец достаточно большой — серый металл. Многие получены в микроскопических количествах.", "color": "#88aacc"}, "99": {"phase": "solid", "look": "Радиоактивный серебристый металл", "real": "Если образец достаточно большой — серый металл. Многие получены в микроскопических количествах.", "color": "#88aacc"}, "100": {"phase": "solid", "look": "Радиоактивный серебристый металл", "real": "Если образец достаточно большой — серый металл. Многие получены в микроскопических количествах.", "color": "#88aacc"}, "101": {"phase": "solid", "look": "Радиоактивный серебристый металл", "real": "Если образец достаточно большой — серый металл. Многие получены в микроскопических количествах.", "color": "#88aacc"}, "102": {"phase": "solid", "look": "Радиоактивный серебристый металл", "real": "Если образец достаточно большой — серый металл. Многие получены в микроскопических количествах.", "color": "#88aacc"}, "103": {"phase": "solid", "look": "Радиоактивный серебристый металл", "real": "Если образец достаточно большой — серый металл. Многие получены в микроскопических количествах.", "color": "#88aacc"}, "104": {"phase": "solid", "look": "Металл с характерным блеском", "real": "Большинство — серые твёрдые металлы. Исключения по цвету: медь, золото.", "color": "#88aacc"}, "105": {"phase": "solid", "look": "Металл с характерным блеском", "real": "Большинство — серые твёрдые металлы. Исключения по цвету: медь, золото.", "color": "#88aacc"}, "106": {"phase": "solid", "look": "Металл с характерным блеском", "real": "Большинство — серые твёрдые металлы. Исключения по цвету: медь, золото.", "color": "#88aacc"}, "107": {"phase": "solid", "look": "Металл с характерным блеском", "real": "Большинство — серые твёрдые металлы. Исключения по цвету: медь, золото.", "color": "#88aacc"}, "108": {"phase": "solid", "look": "Металл с характерным блеском", "real": "Большинство — серые твёрдые металлы. Исключения по цвету: медь, золото.", "color": "#88aacc"}, "109": {"phase": "unknown", "look": "Образец практически недоступен", "real": "Сверхтяжёлый элемент: синтезированы единичные атомы, «посмотреть глазами» нельзя.", "color": "#666680"}, "110": {"phase": "unknown", "look": "Образец практически недоступен", "real": "Сверхтяжёлый элемент: синтезированы единичные атомы, «посмотреть глазами» нельзя.", "color": "#666680"}, "111": {"phase": "unknown", "look": "Образец практически недоступен", "real": "Сверхтяжёлый элемент: синтезированы единичные атомы, «посмотреть глазами» нельзя.", "color": "#666680"}, "112": {"phase": "solid", "look": "Металл с характерным блеском", "real": "Большинство — серые твёрдые металлы. Исключения по цвету: медь, золото.", "color": "#88aacc"}, "113": {"phase": "unknown", "look": "Образец практически недоступен", "real": "Сверхтяжёлый элемент: синтезированы единичные атомы, «посмотреть глазами» нельзя.", "color": "#666680"}, "114": {"phase": "unknown", "look": "Образец практически недоступен", "real": "Сверхтяжёлый элемент: синтезированы единичные атомы, «посмотреть глазами» нельзя.", "color": "#666680"}, "115": {"phase": "unknown", "look": "Образец практически недоступен", "real": "Сверхтяжёлый элемент: синтезированы единичные атомы, «посмотреть глазами» нельзя.", "color": "#666680"}, "116": {"phase": "unknown", "look": "Образец практически недоступен", "real": "Сверхтяжёлый элемент: синтезированы единичные атомы, «посмотреть глазами» нельзя.", "color": "#666680"}, "117": {"phase": "unknown", "look": "Образец практически недоступен", "real": "Сверхтяжёлый элемент: синтезированы единичные атомы, «посмотреть глазами» нельзя.", "color": "#666680"}, "118": {"phase": "gas", "look": "Бесцветный инертный газ", "real": "Невидим и почти не с чем не реагирует. В лампах и рекламных трубках даёт цветное свечение.", "color": "#88aacc"}};
+    let encyIdx = 0;
+
+    function phaseLabel(p) {
+      return {gas:"Газ",liquid:"Жидкость",solid:"Твёрдое",unknown:"Неизвестно"}[p] || p;
+    }
+
+    function renderEncy(i) {
+      encyIdx = (i + ELEMENTS.length) % ELEMENTS.length;
+      const el = ELEMENTS[encyIdx];
+      const a = APPEAR[String(el.z)] || {phase:"solid",look:"—",real:"—",color:"#88aacc"};
+      const card = document.getElementById("encyCard");
+      const photoSrc = "photos/" + String(el.z).padStart(3,"0") + ".jpg";
+      let visual = "";
+      // Prefer real photo when available (offline files in photos/)
+      visual = `<div class="ency-photo-wrap">
+        <img class="ency-photo" src="${photoSrc}" alt="${el.n}"
+          onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"
+          style="display:block"/>
+        <div class="ency-visual phase-${a.phase||'solid'}" style="--el-color:${a.color};display:none;width:100%;height:160px">
+          <div class="big-sym-vis">${el.s}</div>
+        </div>
+        <span class="ency-photo-credit">images-of-elements.com · CC BY</span>
+      </div>`;
+      card.innerHTML = visual + `
+        <div class="ency-body">
+          <div class="ency-name">${el.n}</div>
+          <div class="ency-meta">
+            <span class="tag">Z = ${el.z}</span>
+            <span class="tag type">${phaseLabel(a.phase)}</span>
+            <span class="tag bond">${el.c}</span>
+          </div>
+          <div class="ency-section"><h4>Как выглядит</h4><p>${a.look}</p></div>
+          <div class="ency-section"><h4>В реальности</h4><p>${a.real}</p></div>
+          <div class="ency-section"><h4>Заметка</h4><p>${el.edu||""}</p></div>
+          <div class="ency-section"><h4>Валентность (типичная)</h4><p>${el.val ?? "—"}</p></div>
+          <button class="btn btn-primary" style="width:100%;margin-top:8px" id="encyAddBtn">＋ В реактор</button>
+        </div>`;
+      document.getElementById("encyPos").textContent = `${el.z} / 118 · ${el.s}`;
+      const addBtn = document.getElementById("encyAddBtn");
+      if (addBtn) addBtn.onclick = () => { addToReactor(el); showToast(el.s + " добавлен в реактор"); switchView("reactor"); };
+      // swipe on card
+      let sx=0;
+      card.ontouchstart = e => { sx = e.changedTouches[0].screenX; };
+      card.ontouchend = e => {
+        const dx = e.changedTouches[0].screenX - sx;
+        if (dx < -50) renderEncy(encyIdx+1);
+        if (dx > 50) renderEncy(encyIdx-1);
+      };
+    }
+
+    function switchView(name) {
+      document.querySelectorAll(".nav-btn").forEach(b => b.classList.toggle("active", b.dataset.view===name));
+      const ency = document.getElementById("viewEncy");
+      const main = document.querySelector("main");
+      if (name === "ency") {
+        ency.style.display = "flex";
+        if (main) main.style.visibility = "hidden";
+        renderEncy(encyIdx);
+      } else {
+        ency.style.display = "none";
+        if (main) main.style.visibility = "visible";
+        if (name === "journal") { renderJournal(); document.getElementById("journalModal").classList.add("open"); }
+        if (name === "quiz") startQuiz();
+      }
+    }
+
+    document.getElementById("bottomNav").addEventListener("click", e => {
+      const btn = e.target.closest(".nav-btn");
+      if (!btn) return;
+      switchView(btn.dataset.view);
+    });
+    document.getElementById("encyPrev").onclick = () => renderEncy(encyIdx-1);
+    document.getElementById("encyNext").onclick = () => renderEncy(encyIdx+1);
+
+    // Enhance showElementInfo with appearance
+    const _showEl = showElementInfo;
+    showElementInfo = function(el) {
+      const a = APPEAR[String(el.z)] || {};
+      encyIdx = el.z - 1;
+      _showEl(el);
+      const detail = document.getElementById("elDetail");
+      if (detail && a.real) {
+        detail.insertAdjacentHTML("beforeend", `
+          <div style="text-align:left;margin-top:12px;padding:10px;background:rgba(0,0,0,.25);border-radius:10px">
+            <div style="font-size:.65rem;color:var(--accent);text-transform:uppercase;margin-bottom:4px">В реальности</div>
+            <div style="font-size:.8rem;line-height:1.4">${a.look||""}</div>
+            <div style="font-size:.78rem;color:var(--muted);margin-top:6px;line-height:1.4">${a.real||""}</div>
+          </div>
+          <button class="btn btn-secondary" style="width:100%;margin-top:10px" onclick="document.getElementById('infoModal').classList.remove('open');switchView('ency')">📖 Открыть в энциклопедии</button>
+        `);
+      }
+    };
+
+    // Synth animation
+    const _synthesize = synthesize;
+    synthesize = function() {
+      const fx = document.getElementById("synthFx");
+      if (fx) { fx.classList.add("on"); setTimeout(() => fx.classList.remove("on"), 700); }
+      _synthesize();
+    };
+    btnSynth.onclick = synthesize;
+
+    // Init
+    renderElements();
+    renderSlots();
+    updateSynthBtn();
+    updateProgress();
+  </script>
+</body>
+</html>

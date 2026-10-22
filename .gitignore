@@ -1,0 +1,16 @@
+node_modules/
+dist/
+www/
+.output/
+.vercel/
+android/build/
+android/app/build/
+android/.gradle/
+android/local.properties/
+android/captures/
+android/.idea/
+*.apk
+*.aab
+*.log
+.DS_Store
+index.backup.html
