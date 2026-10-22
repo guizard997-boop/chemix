@@ -15,6 +15,8 @@ const files = [
   "index.html",
   "manifest.webmanifest",
   "sw.js",
+  "icon.png",
+  "icon-512.png",
 ];
 
 for (const f of files) {
