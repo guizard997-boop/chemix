@@ -50,9 +50,6 @@ jobs:
         run: |
           node scripts/setup-release-signing.mjs
           test -f android/app/release.keystore
-          echo "==== build.gradle (signing) ===="
-          grep -n -A20 "signingConfigs" android/app/build.gradle || true
-          grep -n -A15 "release" android/app/build.gradle | head -40 || true
           ls -la android/app/release.keystore android/app/key.properties android/key.properties
 
       - name: Build RELEASE APK

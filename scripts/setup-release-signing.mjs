@@ -68,13 +68,25 @@ function patchGroovy(path) {
   // Remove existing signingConfig lines in release to avoid duplicates
   g = g.replace(/signingConfig\s+signingConfigs\.[a-zA-Z0-9_]+\s*\n/g, "");
 
-  // Add signingConfig to release { blocks
-  g = g.replace(
-    /release\s*\{/g,
-    `release {
-            signingConfig signingConfigs.release
-            debuggable false`
-  );
+  // Target only the release block inside buildTypes. A global replacement
+  // also matches signingConfigs.release and causes Gradle evaluation to fail.
+  const buildTypesRe = /\bbuildTypes\s*\{/g;
+  const buildTypesMatch = buildTypesRe.exec(g);
+  const releaseRe = /\brelease\s*\{/g;
+  if (!buildTypesMatch) {
+    console.error("buildTypes block not found");
+    process.exit(1);
+  }
+  releaseRe.lastIndex = buildTypesRe.lastIndex;
+  const releaseMatch = releaseRe.exec(g);
+  if (!releaseMatch) {
+    console.error("release buildType not found");
+    process.exit(1);
+  }
+  const insertAt = releaseMatch.index + releaseMatch[0].length;
+  g = g.slice(0, insertAt) +
+    "\n            signingConfig signingConfigs.release\n            debuggable false" +
+    g.slice(insertAt);
 
   writeFileSync(path, g);
   console.log("patched", path);
