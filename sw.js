@@ -1,4 +1,4 @@
-const CACHE = 'chemix-v4';
+const CACHE = 'chemix-v5';
 const ASSETS = [
   './',
   './index.html',
