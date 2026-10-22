@@ -6,8 +6,9 @@
   "scripts": {
     "build:mobile": "node scripts/build-mobile.mjs",
     "cap:add": "cap add android",
-    "cap:sync": "npm run build:mobile && cap sync android",
-    "cap:open": "cap open android"
+    "cap:sync": "npm run build:mobile && cap sync android && node scripts/apply-android-icons.mjs",
+    "cap:open": "cap open android",
+    "cap:icons": "node scripts/apply-android-icons.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^7.0.0",

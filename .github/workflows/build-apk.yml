@@ -32,14 +32,20 @@ jobs:
       - name: Build mobile web assets
         run: npm run build:mobile
 
-      - name: Check www/index.html exists
-        run: test -f www/index.html
+      - name: Check icons in www
+        run: |
+          test -f www/index.html
+          test -f www/icon.png || test -f www/ICON_KOLBA.png || test -f www/icons/icon-512.png
+          ls -la www/*.png www/favicon.ico 2>/dev/null || ls -la www/icons/ | head
 
       - name: Add Android platform
         run: npx cap add android
 
       - name: Sync Capacitor
         run: npx cap sync android
+
+      - name: Apply Chemix flask launcher icons
+        run: node scripts/apply-android-icons.mjs
 
       - name: Build debug APK
         working-directory: android
@@ -52,11 +58,11 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: apk-latest
-          name: ХимОлимп APK
+          name: Chemix APK
           body: |
-            Debug APK собран через GitHub Actions (Capacitor).
-            Скачайте `app-debug.apk` и установите на Android
-            (разрешите установку из неизвестных источников).
+            Chemix APK (Capacitor + иконка-колба).
+            Скачайте `app-debug.apk` и установите на Android.
+            Разрешите установку из неизвестных источников.
           files: android/app/build/outputs/apk/debug/app-debug.apk
           overwrite: true
         env:

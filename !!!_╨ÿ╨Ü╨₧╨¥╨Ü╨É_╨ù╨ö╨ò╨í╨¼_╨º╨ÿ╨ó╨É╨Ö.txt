@@ -1,0 +1,19 @@
+
+ИКОНКА ПРИЛОЖЕНИЯ CHEMIX = КОЛБА (не крестик)
+
+Главные файлы иконки (клади РЯДОМ с index.html на хостинг):
+  icon.png
+  icon-512.png
+  favicon.ico
+  ICON_KOLBA.png
+  apple-touch-icon.png
+  manifest.webmanifest
+
+Если на ярлыке крестик (X):
+1) Удали старый ярлык Chemix
+2) Залей ВСЮ папку на https (Netlify Drop)
+3) Устанавливай ТОЛЬКО с https-ссылки
+4) С локального файла Android почти всегда ставит дефолтный X
+
+Для PWABuilder: загрузи icon-512.png в настройках Icons.
+Для RuStore: icon-512.png как иконка карточки + та же в APK.

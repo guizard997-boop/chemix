@@ -15,8 +15,6 @@ const files = [
   "index.html",
   "manifest.webmanifest",
   "sw.js",
-  "icon.png",
-  "icon-512.png",
 ];
 
 for (const f of files) {
@@ -37,6 +35,18 @@ if (existsSync(photosDir)) {
   cpSync(photosDir, join(www, "photos"), { recursive: true });
   console.log("photos copied");
 }
+
+// Root icons — critical for PWA + so Android WebView/chrome doesn't show default X
+const rootIcons = [
+  "icon.png", "icon-512.png", "favicon.ico", "favicon-192.png", "favicon-512.png",
+  "ICON_KOLBA.png", "apple-touch-icon.png",
+  "icon-maskable-192.png", "icon-maskable-512.png"
+];
+for (const f of rootIcons) {
+  const src = join(root, f);
+  if (existsSync(src)) cpSync(src, join(www, f));
+}
+
 
 // Capacitor loads from file/https scheme — ensure relative paths stay relative
 const indexPath = join(www, "index.html");
